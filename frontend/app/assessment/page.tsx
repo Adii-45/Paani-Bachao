@@ -100,7 +100,7 @@ export default function AssessmentPage() {
               <div><h2>Property and rooftop details</h2><p>Information used to estimate available rooftop runoff.</p></div>
             </header>
             <div className="form-grid">
-              <FormField id="location" label="Location / Locality" helper="Select a city available in the configured development rainfall dataset." className="field-wide">
+              <FormField id="location" label="Location / Locality" helper="Select a city covered by the configured rainfall dataset." className="field-wide">
                 <select id="location" name="location" required defaultValue={savedInputs?.location ?? ""} aria-describedby="location-help">
                   <option value="" disabled>Select city / locality</option>
                   <option value="Bengaluru">Bengaluru</option>

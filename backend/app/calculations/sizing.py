@@ -1,3 +1,4 @@
+import math
 from typing import Any
 
 
@@ -10,7 +11,7 @@ def recommended_storage_litres(
     if fraction is None or increments is None:
         return None, "Assessment unavailable. Engineering sizing rule not configured yet."
     raw_size = potential_litres * float(fraction)
-    rounded = ((raw_size + increments - 1) // increments) * increments
+    rounded = math.ceil(raw_size / increments) * increments
     if maximum is not None:
         rounded = min(rounded, maximum)
     return float(rounded), None

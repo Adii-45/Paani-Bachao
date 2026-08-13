@@ -85,8 +85,8 @@ export default function ResultPage() {
         </section>
 
         {result.isDemoData && (
-          <InfoNotice title="Development ruleset in use" tone="warning">
-            <p>Results use demo development values that are not validated engineering data. They must not be used for construction.</p>
+          <InfoNotice title="Unvalidated ruleset in use" tone="warning">
+            <p>Results use configured values that have not been validated as engineering data. They must not be used for construction.</p>
           </InfoNotice>
         )}
 
@@ -128,7 +128,7 @@ export default function ResultPage() {
             {result.rtrwh.sizingMessage ? (
               <p className="unavailable-message">{result.rtrwh.sizingMessage}</p>
             ) : (
-              <p className="section-note">This is a preliminary storage recommendation. Household-demand optimization and rainfall distribution modelling are not part of this MVP.</p>
+              <p className="section-note">This is a preliminary storage recommendation. Household-demand optimization and rainfall distribution modelling are not included in this assessment.</p>
             )}
           </ResultSection>
         </div>
@@ -173,7 +173,6 @@ export default function ResultPage() {
         </InfoNotice>
 
         <div className="result-actions">
-          <Link className="button button-outline" href="/assessment">← Back to Inputs</Link>
           <Link className="button button-primary" href="/">Return Home</Link>
         </div>
       </div>
