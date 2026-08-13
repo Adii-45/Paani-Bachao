@@ -1,0 +1,25 @@
+minimum_pre_commit_version: "4.0.0"
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-ast
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+
+  - repo: local
+    hooks:
+      - id: frontend-eslint
+        name: frontend ESLint
+        entry: node frontend/scripts/eslint-staged.mjs
+        language: system
+        files: ^frontend/.*\.(js|jsx|mjs|cjs|ts|tsx)$
+        pass_filenames: true

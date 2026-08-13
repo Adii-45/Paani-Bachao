@@ -16,4 +16,3 @@ export function useSessionValue(key: string): string | null {
     () => SERVER_SNAPSHOT,
   );
 }
-

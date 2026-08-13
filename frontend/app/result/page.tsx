@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { InfoNotice } from "@/components/InfoNotice";
 import { ResultSection, StatusBadge } from "@/components/ResultUI";
-import { AssessmentResult, displayLabel } from "@/lib/types";
+import { displayLabel } from "@/lib/types";
+import type { AssessmentResult } from "@/lib/types";
 import { SERVER_SNAPSHOT, useSessionValue } from "@/lib/session";
 
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });

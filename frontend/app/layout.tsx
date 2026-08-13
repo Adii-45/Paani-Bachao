@@ -4,13 +4,14 @@ import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RainAssess | Rainwater & Recharge Assessment",
-  description: "A preliminary rooftop rainwater harvesting and recharge assessment for homes.",
+  applicationName: "Paani Bachao",
+  title: "Paani Bachao | Rainwater & Recharge Assessment",
+  description: "Estimate rooftop rainwater harvesting and groundwater recharge potential for your property.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>
         <SiteHeader />
         {children}

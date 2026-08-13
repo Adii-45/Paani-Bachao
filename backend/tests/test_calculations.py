@@ -21,4 +21,3 @@ def test_demo_recharge_rule_classification() -> None:
         "classificationThresholds": [{"minimumScore": 6, "classification": "HIGH"}],
     }
     assert classify_recharge("SANDY", 8, 15, rules) == ("HIGH", 0.7)
-

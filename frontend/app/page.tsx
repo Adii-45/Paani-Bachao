@@ -35,11 +35,7 @@ export default function Home() {
               <Link className="button button-primary" href="/assessment">Start Assessment <span aria-hidden="true">→</span></Link>
               <Link className="button button-outline" href="#how-it-works">How It Works</Link>
             </div>
-            <div className="service-facts" aria-label="Service details">
-              <span><b>No login</b> required</span>
-              <span><b>6 property</b> inputs</span>
-              <span><b>Deterministic</b> assessment</span>
-            </div>
+            <p className="service-note">No login is required. The assessment uses six property details and configured engineering rules.</p>
           </div>
 
           <div className="hero-service-card" aria-label="Assessment outputs">
@@ -59,21 +55,20 @@ export default function Home() {
       </section>
 
       <section className="process-section" id="how-it-works">
-        <div className="shell">
+        <div className="shell process-layout">
           <div className="section-heading">
             <span>Assessment process</span>
             <h2>How the service works</h2>
             <p>A short, transparent workflow designed for residential property owners.</p>
           </div>
-          <div className="process-grid">
+          <ol className="process-list">
             {steps.map((step) => (
-              <article className="process-card" key={step.number}>
+              <li key={step.number}>
                 <span className="step-number">{step.number}</span>
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
-              </article>
+                <div><h3>{step.title}</h3><p>{step.text}</p></div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
@@ -83,7 +78,7 @@ export default function Home() {
             <span className="section-kicker">About the assessment</span>
             <h2>Clear estimates based on configured data and rules</h2>
             <p>
-              RainAssess combines property information with configured rainfall and engineering
+              Paani Bachao combines property information with configured rainfall and engineering
               rules. Calculations are deterministic, reproducible and kept separate from the user interface.
             </p>
           </div>

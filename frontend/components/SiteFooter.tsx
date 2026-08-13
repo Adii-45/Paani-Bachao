@@ -5,7 +5,7 @@ export function SiteFooter() {
     <footer className="portal-footer">
       <div className="shell footer-main">
         <div>
-          <strong>Rainwater &amp; Groundwater Assessment Platform</strong>
+          <strong>Paani Bachao</strong>
           <p>Preliminary assessment tool for rooftop rainwater harvesting and artificial recharge planning.</p>
         </div>
         <nav aria-label="Footer navigation">
@@ -16,11 +16,10 @@ export function SiteFooter() {
       </div>
       <div className="footer-base">
         <div className="shell">
-          <span>RainAssess MVP</span>
+          <span>Paani Bachao MVP</span>
           <span>Indicative results only — professional site assessment may be required.</span>
         </div>
       </div>
     </footer>
   );
 }
-

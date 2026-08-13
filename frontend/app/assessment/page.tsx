@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AssessmentInput } from "@/lib/types";
+import type { AssessmentInput } from "@/lib/types";
 import { FormField } from "@/components/FormField";
 import { InfoNotice } from "@/components/InfoNotice";
 import { SERVER_SNAPSHOT, useSessionValue } from "@/lib/session";
