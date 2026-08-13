@@ -1,0 +1,19 @@
+{
+  "notice": "DEMO / DEVELOPMENT VALUE — NOT VALIDATED",
+  "structureRules": [
+    {
+      "allowedClassifications": ["HIGH", "MEDIUM"],
+      "minimumAreaM2": 9,
+      "type": "RECHARGE_TRENCH",
+      "displayName": "Recharge Trench",
+      "dimensions": {"lengthM": 3, "widthM": 1, "depthM": 1.5}
+    },
+    {
+      "allowedClassifications": ["HIGH", "MEDIUM", "LOW"],
+      "minimumAreaM2": 4,
+      "type": "RECHARGE_PIT",
+      "displayName": "Recharge Pit",
+      "dimensions": {"lengthM": 2, "widthM": 2, "depthM": 2}
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "notice": "DEMO / DEVELOPMENT VALUE — NOT VALIDATED",
+  "materials": {
+    "RCC": {"runoffCoefficient": 0.8},
+    "TILES": {"runoffCoefficient": 0.75},
+    "METAL": {"runoffCoefficient": 0.85},
+    "OTHER": {"runoffCoefficient": null},
+    "DONT_KNOW": {"runoffCoefficient": null}
+  }
+}
