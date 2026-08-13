@@ -12,4 +12,3 @@ def get_rainfall(location: str, config: dict[str, Any]) -> dict[str, Any] | None
         if requested in {normalize_location(name) for name in names}:
             return item
     return config.get("default")
-

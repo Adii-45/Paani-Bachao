@@ -83,4 +83,3 @@ class AssessmentResponse(BaseModel):
     isDemoData: bool
     formula: FormulaDetails
     warnings: list[str]
-

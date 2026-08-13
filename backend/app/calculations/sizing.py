@@ -14,4 +14,3 @@ def recommended_storage_litres(
     if maximum is not None:
         rounded = min(rounded, maximum)
     return float(rounded), None
-

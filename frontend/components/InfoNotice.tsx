@@ -9,7 +9,7 @@ type InfoNoticeProps = {
 
 export function InfoNotice({ title, children, tone = "info", className = "" }: InfoNoticeProps) {
   return (
-    <aside className={`info-notice info-notice-${tone} ${className}`.trim()}>
+    <aside className={`info-notice info-notice-${tone} ${className}`.trim()} role={tone === "error" ? "alert" : undefined}>
       <span className="notice-symbol" aria-hidden="true">i</span>
       <div>
         <strong>{title}</strong>
@@ -18,4 +18,3 @@ export function InfoNotice({ title, children, tone = "info", className = "" }: I
     </aside>
   );
 }
-

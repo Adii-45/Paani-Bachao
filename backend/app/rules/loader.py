@@ -22,4 +22,3 @@ def load_rule(name: str, ruleset: str | None = None) -> dict[str, Any]:
         raise RuntimeError(f"Rule configuration is missing: {path.name}")
     with path.open(encoding="utf-8") as source:
         return json.load(source)
-

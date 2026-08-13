@@ -1,12 +1,12 @@
-# RainAssess
+# Paani Bachao
 
-RainAssess is a focused MVP for preliminary residential rooftop rainwater harvesting (RTRWH) and artificial recharge (AR) assessment. A homeowner enters six simple site details and receives a transparent, deterministic result.
+Paani Bachao is a focused MVP for preliminary residential rooftop rainwater harvesting (RTRWH) and artificial recharge (AR) assessment. A homeowner enters six simple site details and receives a transparent, deterministic result.
 
 > The repository ships with an explicitly marked **demo ruleset** so the complete flow can be tried locally. Those values are not validated engineering data and must not be used for construction. The production ruleset is intentionally empty.
 
 ## Architecture
 
-- `frontend/` — Next.js 15 + TypeScript user interface
+- `frontend/` — Next.js 16 + TypeScript user interface
 - `backend/` — FastAPI API, validation, calculation modules, and rule loading
 - `backend/app/data/demo/` — isolated, unvalidated development values
 - `backend/app/data/production/` — configurable placeholders for validated data
@@ -42,15 +42,39 @@ npm run dev
 
 Open `http://localhost:3000`. Suggested demo locations are Bengaluru, Chennai, Delhi, Hyderabad, and Mumbai.
 
+## Developer checks
+
+After installing the backend and frontend dependencies, install the pre-commit development tool into the backend virtual environment and activate the Git hook once per clone:
+
+```bash
+uv pip install --python backend/.venv/bin/python -r requirements-dev.txt
+backend/.venv/bin/pre-commit install
+```
+
+The committed `.pre-commit-config.yaml` runs fast file validation, Python syntax checks, and ESLint on staged frontend files before each commit. Run every hook manually with:
+
+```bash
+backend/.venv/bin/pre-commit run --all-files
+```
+
+Pre-commit is an early local check; GitHub Actions remains the source of full lint, type-check, test, and production-build verification.
+
 ## Tests
 
 ```bash
 cd backend
-python -m pytest
+.venv/bin/python -m pytest
 
 cd ../frontend
+npm run lint
+npm run typecheck
+npm test
 npm run build
 ```
+
+## Continuous integration
+
+CI runs automatically on pushes and pull requests to `main`. Separate frontend and backend jobs check linting, types, tests, application imports, and the production build using the repository's existing npm and Python dependency files.
 
 ## Rulesets
 

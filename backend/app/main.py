@@ -5,7 +5,7 @@ from .schemas import AssessmentRequest, AssessmentResponse
 from .services.assessment import create_assessment
 
 app = FastAPI(
-    title="RainAssess API",
+    title="Paani Bachao API",
     version="0.1.0",
     description="Preliminary residential rooftop rainwater harvesting assessment API.",
 )

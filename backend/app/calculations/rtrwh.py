@@ -3,4 +3,3 @@ def calculate_potential_litres(
 ) -> float:
     """1 mm of rain over 1 m² equals 1 litre of water."""
     return round(roof_area_m2 * annual_rainfall_mm * runoff_coefficient, 2)
-

@@ -50,4 +50,3 @@ def select_structure(
                 rule.get("dimensions"),
             )
     return None, None
-
