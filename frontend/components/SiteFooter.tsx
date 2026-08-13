@@ -10,13 +10,13 @@ export function SiteFooter() {
         </div>
         <nav aria-label="Footer navigation">
           <Link href="/">Home</Link>
-          <Link href="/assessment">Start Assessment</Link>
+          <Link href="/assessment">Assessment</Link>
           <Link href="/#about">About</Link>
         </nav>
       </div>
       <div className="footer-base">
         <div className="shell">
-          <span>Paani Bachao MVP</span>
+          <span>Independent preliminary assessment service</span>
           <span>Indicative results only — professional site assessment may be required.</span>
         </div>
       </div>
