@@ -1,30 +1,61 @@
 import pytest
 
-from app.calculations.rtrwh import calculate_potential_litres
-
-
-@pytest.mark.parametrize(
-    ("roof_area_m2", "rainfall_mm", "coefficient", "expected_litres"),
-    [
-        (25, 800, 0.8, 16_000),
-        (100, 1_000, 0.8, 80_000),
-        (350, 2_200, 0.85, 654_500),
-        (42.5, 970, 0.75, 30_918.75),
-        (12.25, 850.5, 0.8, 8_334.9),
-        (0, 970, 0.8, 0),
-    ],
+from app.domain.units import (
+    AreaSquareMeters,
+    RainfallMM,
+    RunoffCoefficient,
 )
-def test_potential_uses_mm_m2_to_litres_identity(
-    roof_area_m2: float,
-    rainfall_mm: float,
-    coefficient: float,
-    expected_litres: float,
-) -> None:
-    assert (
-        calculate_potential_litres(roof_area_m2, rainfall_mm, coefficient)
-        == expected_litres
+from app.engineering.rtrwh.harvesting import (
+    METHOD_ID,
+    calculate_annual_harvest,
+)
+
+
+def test_cgwb_manual_worked_example() -> None:
+    """CGWB Manual (2007), §7.2.7.1, document page 119.
+
+    Published example: 1000 mm × 20 m² × 0.75 = 15,000 litres.
+    The coefficient is used only to reproduce that example, not as an RCC default.
+    """
+
+    result = calculate_annual_harvest(
+        RainfallMM(1_000), AreaSquareMeters(20), RunoffCoefficient(0.75)
     )
 
+    assert result.gross_rainfall_volume.value == 20_000
+    assert result.estimated_losses.value == 5_000
+    assert result.harvestable_volume.value == 15_000
+    assert result.method_id == METHOD_ID
+    assert result.source_ids == ("CGWB_MANUAL_AR_2007",)
 
-def test_potential_is_rounded_to_two_decimal_places() -> None:
-    assert calculate_potential_litres(1.111, 1.111, 0.777) == 0.96
+
+def test_established_mm_square_metre_litre_conversion() -> None:
+    result = calculate_annual_harvest(
+        RainfallMM(1), AreaSquareMeters(1), RunoffCoefficient(1)
+    )
+
+    assert result.gross_rainfall_volume.value == 1
+    assert result.harvestable_volume.value == 1
+    assert result.estimated_losses.value == 0
+
+
+def test_decimal_inputs_are_rounded_only_at_output_boundary() -> None:
+    result = calculate_annual_harvest(
+        RainfallMM(1.111), AreaSquareMeters(1.111), RunoffCoefficient(0.777)
+    )
+
+    assert result.harvestable_volume.value == 0.96
+
+
+@pytest.mark.parametrize("value", [-0.001, -1])
+def test_negative_physical_values_are_rejected(value: float) -> None:
+    with pytest.raises(ValueError):
+        RainfallMM(value)
+    with pytest.raises(ValueError):
+        AreaSquareMeters(value)
+
+
+@pytest.mark.parametrize("value", [-0.01, 1.01])
+def test_coefficient_outside_physical_range_is_rejected(value: float) -> None:
+    with pytest.raises(ValueError):
+        RunoffCoefficient(value)

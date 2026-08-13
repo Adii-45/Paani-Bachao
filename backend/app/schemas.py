@@ -1,7 +1,10 @@
+from datetime import date
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .provenance.models import DataStatus, PublishedRange, SourceCitation, ValueProvenance
 
 
 class RoofMaterial(str, Enum):
@@ -30,6 +33,14 @@ class AssessmentRequest(BaseModel):
     soilType: SoilType
     groundwaterDepthM: float = Field(ge=0, le=1_000)
     availableGroundAreaM2: float = Field(ge=0, le=100_000)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    state: str | None = Field(default=None, max_length=120)
+    district: str | None = Field(default=None, max_length=120)
+    groundwaterObservationDate: date | None = None
+    groundwaterObservationSeason: str | None = Field(default=None, max_length=80)
+    groundwaterObservationMethod: str | None = Field(default=None, max_length=160)
+    groundwaterSource: str | None = Field(default=None, max_length=160)
 
     @field_validator("location")
     @classmethod
@@ -43,12 +54,42 @@ class DerivedData(BaseModel):
     annualRainfallMm: float | None
     rainfallSource: str | None
     runoffCoefficient: float | None
+    rainfallStatus: DataStatus
+    rainfall: "RainfallEvidence"
+    runoffCoefficientStatus: DataStatus
+    runoffCoefficientEvidence: "RunoffCoefficientEvidence"
+
+
+class RainfallEvidence(BaseModel):
+    status: DataStatus
+    value: float | None
+    unit: str = "mm/year"
+    statisticType: str | None = None
+    referencePeriod: str | None = None
+    spatialResolution: str | None = None
+    sourceRecord: str | None = None
+    datasetVersion: str | None = None
+    provenance: ValueProvenance | None = None
+    message: str
+
+
+class RunoffCoefficientEvidence(BaseModel):
+    status: DataStatus
+    valueRange: PublishedRange | None = None
+    condition: str | None = None
+    provenance: ValueProvenance | None = None
+    message: str
 
 
 class RtrwhResult(BaseModel):
     potentialLitresPerYear: float | None
     recommendedSizeLitres: float | None
     sizingMessage: str | None = None
+    calculationStatus: DataStatus
+    sizingStatus: str
+    sizingMethodId: str
+    sizingMissingInputs: list[str]
+    sizingSourceIds: list[str]
 
 
 class StructureRecommendation(BaseModel):
@@ -62,6 +103,34 @@ class ArtificialRechargeResult(BaseModel):
     recommendedStructure: StructureRecommendation | None
     dimensions: dict[str, Any] | None
     message: str | None = None
+    feasibilityStatus: str
+    criteria: list["FeasibilityCriterionResponse"]
+    reasons: list[str]
+    quantityStatus: str
+    quantityMissingInputs: list[str]
+    structureSelectionStatus: str
+    alternativeStructures: list[str]
+    selectionReasons: list[str]
+    rejectedStructures: list["RejectedStructureResponse"]
+    structureMissingInputs: list[str]
+    sizingStatus: str
+    sizingMissingInputs: list[str]
+    sourceIds: list[str]
+
+
+class FeasibilityCriterionResponse(BaseModel):
+    criterion: str
+    result: str
+    observedValue: str | float | None
+    requiredCondition: str
+    reason: str
+    sourceIds: list[str]
+
+
+class RejectedStructureResponse(BaseModel):
+    structure: str
+    reason: str
+    sourceIds: list[str]
 
 
 class FormulaDetails(BaseModel):
@@ -69,6 +138,12 @@ class FormulaDetails(BaseModel):
     roofAreaM2: float
     annualRainfallMm: float | None
     runoffCoefficient: float | None
+    methodId: str
+    grossRainfallVolumeLitres: float | None
+    estimatedLossesLitres: float | None
+    harvestableVolumeLitres: float | None
+    sourceIds: list[str]
+    assumptions: list[str]
 
 
 class AssessmentResponse(BaseModel):
@@ -83,3 +158,4 @@ class AssessmentResponse(BaseModel):
     isDemoData: bool
     formula: FormulaDetails
     warnings: list[str]
+    sources: list[SourceCitation]

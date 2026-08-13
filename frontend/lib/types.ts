@@ -9,26 +9,77 @@ export type AssessmentInput = {
 
 export type AssessmentResult = {
   inputs: AssessmentInput;
-  derived: { annualRainfallMm: number | null; rainfallSource: string | null; runoffCoefficient: number | null };
-  rtrwh: { potentialLitresPerYear: number | null; recommendedSizeLitres: number | null; sizingMessage: string | null };
+  derived: {
+    annualRainfallMm: number | null;
+    rainfallSource: string | null;
+    runoffCoefficient: number | null;
+    rainfallStatus?: string;
+    rainfall?: { message: string; referencePeriod: string | null; spatialResolution: string | null };
+    runoffCoefficientStatus?: string;
+    runoffCoefficientEvidence?: { message: string };
+  };
+  rtrwh: {
+    potentialLitresPerYear: number | null;
+    recommendedSizeLitres: number | null;
+    sizingMessage: string | null;
+    calculationStatus?: string;
+    sizingStatus?: string;
+    sizingMethodId?: string;
+    sizingMissingInputs?: string[];
+    sizingSourceIds?: string[];
+  };
   artificialRecharge: {
     potential: string | null;
     potentialRechargeLitresPerYear: number | null;
     recommendedStructure: { type: string; displayName: string } | null;
     dimensions: Record<string, string | number> | null;
     message: string | null;
+    feasibilityStatus?: string;
+    criteria?: Array<{
+      criterion: string;
+      result: string;
+      observedValue: string | number | null;
+      requiredCondition: string;
+      reason: string;
+      sourceIds: string[];
+    }>;
+    reasons?: string[];
+    quantityStatus?: string;
+    structureSelectionStatus?: string;
+    structureMissingInputs?: string[];
+    sizingStatus?: string;
   };
   rtrwhSuitability: string;
   dataCompleteness: string;
   assessmentStatus: string;
   ruleset: string;
   isDemoData: boolean;
-  formula: { expression: string; roofAreaM2: number; annualRainfallMm: number | null; runoffCoefficient: number | null };
+  formula: {
+    expression: string;
+    roofAreaM2: number;
+    annualRainfallMm: number | null;
+    runoffCoefficient: number | null;
+    methodId?: string;
+    grossRainfallVolumeLitres?: number | null;
+    estimatedLossesLitres?: number | null;
+    harvestableVolumeLitres?: number | null;
+    sourceIds?: string[];
+    assumptions?: string[];
+  };
   warnings: string[];
+  sources?: Array<{
+    sourceId: string;
+    authority: string;
+    documentTitle: string;
+    documentVersionOrYear: string;
+    section: string | null;
+    page: string | null;
+    sourceUrl: string;
+  }>;
 };
 
 export const labels: Record<string, string> = {
-  RCC: "RCC / Concrete", TILES: "Tiles", METAL: "Metal sheet", OTHER: "Other", DONT_KNOW: "Don't know",
+  RCC: "RCC / Concrete", TILES: "Tiles", METAL: "GI sheet (galvanized iron)", OTHER: "Other", DONT_KNOW: "Don't know",
   SANDY: "Sandy", SANDY_LOAM: "Sandy Loam", LOAM: "Loam", CLAYEY: "Clayey", ROCKY: "Rocky",
   NOT_RECOMMENDED: "Not recommended", NOT_ASSESSED: "Not assessed",
 };

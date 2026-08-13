@@ -6,8 +6,11 @@ from .services.assessment import create_assessment
 
 app = FastAPI(
     title="Paani Bachao API",
-    version="0.1.0",
-    description="Preliminary residential rooftop rainwater harvesting assessment API.",
+    version="0.2.0",
+    description=(
+        "Source-traceable residential rooftop rainwater harvesting and artificial "
+        "recharge assessment API."
+    ),
 )
 
 app.add_middleware(

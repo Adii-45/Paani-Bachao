@@ -1,108 +1,245 @@
-from ..calculations.recharge import classify_recharge, select_structure
-from ..calculations.rtrwh import calculate_potential_litres
-from ..calculations.sizing import recommended_storage_litres
-from ..rules.loader import active_ruleset, load_rule
+from collections.abc import Iterable
+
+from ..domain.environment import LocationQuery
+from ..domain.units import AreaSquareMeters, RainfallMM, RunoffCoefficient
+from ..engineering.recharge import (
+    assess_recharge_quantity,
+    assess_structure_size,
+    evaluate_feasibility,
+    select_structure,
+)
+from ..engineering.rtrwh import assess_storage_size, calculate_annual_harvest
+from ..provenance.models import DataQuality, DataStatus, ValueProvenance
+from ..provenance.registry import citations_for
+from ..providers.rainfall import NormalizedImdRainfallProvider
+from ..providers.runoff import SourceBackedRunoffCoefficientProvider
 from ..schemas import (
     ArtificialRechargeResult,
     AssessmentRequest,
     AssessmentResponse,
     DerivedData,
+    FeasibilityCriterionResponse,
     FormulaDetails,
+    RainfallEvidence,
     RtrwhResult,
+    RunoffCoefficientEvidence,
 )
-from .rainfall import get_rainfall
 
-DEMO_WARNING = "DEMO / DEVELOPMENT VALUE — NOT VALIDATED"
+
+def _unique(values: Iterable[str]) -> list[str]:
+    return list(dict.fromkeys(values))
 
 
 def create_assessment(inputs: AssessmentRequest) -> AssessmentResponse:
-    ruleset = active_ruleset()
-    rainfall = get_rainfall(inputs.location, load_rule("rainfall", ruleset))
-    runoff_config = load_rule("runoff_coefficients", ruleset)
-    coefficient = runoff_config.get("materials", {}).get(inputs.roofMaterial.value)
-    annual_rainfall = rainfall.get("annualRainfallMm") if rainfall else None
-    runoff = coefficient.get("runoffCoefficient") if coefficient else None
+    location = LocationQuery(
+        location=inputs.location,
+        latitude=inputs.latitude,
+        longitude=inputs.longitude,
+        state=inputs.state,
+        district=inputs.district,
+    )
+    rainfall_lookup = NormalizedImdRainfallProvider().lookup(location)
+    coefficient_lookup = SourceBackedRunoffCoefficientProvider().lookup(
+        inputs.roofMaterial.value
+    )
 
-    potential = None
-    if annual_rainfall is not None and runoff is not None:
-        potential = calculate_potential_litres(inputs.roofAreaM2, annual_rainfall, runoff)
+    rainfall_record = rainfall_lookup.record
+    coefficient_record = coefficient_lookup.record
+    rainfall_value = rainfall_record.rainfall_mm if rainfall_record else None
+    coefficient_value = (
+        coefficient_record.value_range.selected_value if coefficient_record else None
+    )
 
-    size, sizing_message = (None, "Assessment unavailable. Engineering sizing rule not configured yet.")
-    if potential is not None:
-        size, sizing_message = recommended_storage_litres(
-            potential, load_rule("rtrwh_sizing", ruleset)
+    rainfall_provenance = None
+    if rainfall_record:
+        rainfall_provenance = ValueProvenance(
+            quality=DataQuality.AUTHORITATIVE_DATASET,
+            source_ids=[rainfall_record.source_id],
+            source_record=rainfall_record.source_record,
+            source_date_or_version=rainfall_record.dataset_version,
+            spatial_resolution=rainfall_record.spatial_resolution,
+            temporal_resolution=rainfall_record.statistic_type,
+            retrieved_at=rainfall_record.retrieved_at,
         )
 
-    classification, recharge_fraction = classify_recharge(
-        inputs.soilType.value,
-        inputs.groundwaterDepthM,
-        inputs.availableGroundAreaM2,
-        load_rule("recharge_rules", ruleset),
+    rainfall_evidence = RainfallEvidence(
+        status=rainfall_lookup.status,
+        value=rainfall_value,
+        statisticType=rainfall_record.statistic_type if rainfall_record else None,
+        referencePeriod=rainfall_record.reference_period if rainfall_record else None,
+        spatialResolution=rainfall_record.spatial_resolution if rainfall_record else None,
+        sourceRecord=rainfall_record.source_record if rainfall_record else None,
+        datasetVersion=rainfall_record.dataset_version if rainfall_record else None,
+        provenance=rainfall_provenance,
+        message=rainfall_lookup.message,
     )
-    recharge_litres = (
-        round(potential * recharge_fraction, 2)
-        if potential is not None and recharge_fraction is not None
-        else None
-    )
-    structure, dimensions = select_structure(
-        classification,
-        inputs.availableGroundAreaM2,
-        load_rule("ar_structures", ruleset),
+    coefficient_evidence = RunoffCoefficientEvidence(
+        status=coefficient_lookup.status,
+        valueRange=coefficient_record.value_range if coefficient_record else None,
+        condition=coefficient_record.condition if coefficient_record else None,
+        provenance=coefficient_record.provenance if coefficient_record else None,
+        message=coefficient_lookup.message,
     )
 
-    unknowns = sum(
-        [inputs.roofMaterial.value == "DONT_KNOW", inputs.soilType.value == "DONT_KNOW"]
+    harvest = None
+    usable_rainfall = rainfall_lookup.status in {
+        DataStatus.DATA_AVAILABLE,
+        DataStatus.DATA_STALE,
+    }
+    if usable_rainfall and rainfall_value is not None and coefficient_value is not None:
+        harvest = calculate_annual_harvest(
+            RainfallMM(rainfall_value),
+            AreaSquareMeters(inputs.roofAreaM2),
+            RunoffCoefficient(coefficient_value),
+        )
+
+    storage = assess_storage_size()
+    recharge_quantity = assess_recharge_quantity()
+    groundwater_has_metadata = all(
+        (
+            inputs.groundwaterObservationDate,
+            inputs.groundwaterObservationSeason,
+            inputs.groundwaterObservationMethod,
+            inputs.groundwaterSource,
+        )
     )
-    completeness = "GOOD" if unknowns == 0 else "LIMITED"
-    if annual_rainfall is None or runoff is None:
-        completeness = "INSUFFICIENT"
+    feasibility = evaluate_feasibility(
+        groundwater_depth_m_bgl=inputs.groundwaterDepthM,
+        groundwater_has_observation_metadata=groundwater_has_metadata,
+        has_recharge_water_balance=False,
+        has_infiltration_evidence=False,
+        has_hydrogeology_evidence=False,
+        has_water_quality_review=False,
+        available_ground_area_m2=inputs.availableGroundAreaM2,
+    )
+    structure_selection = select_structure(feasibility)
+    structure_sizing = assess_structure_size(structure_selection)
 
     warnings: list[str] = []
-    if ruleset == "demo":
-        warnings.append(DEMO_WARNING)
-    if annual_rainfall is None:
-        warnings.append("Rainfall data is not configured for this location.")
-    if runoff is None:
-        warnings.append("Runoff coefficient is not configured for this roof material.")
-    if classification is None:
-        warnings.append("Artificial recharge engineering rule not configured for this combination.")
-    if structure is None:
-        warnings.append("Artificial recharge structure or sizing rule not configured for this combination.")
+    if rainfall_lookup.status is DataStatus.DATA_STALE:
+        warnings.append(rainfall_lookup.message)
+    elif rainfall_lookup.status is not DataStatus.DATA_AVAILABLE:
+        warnings.append(rainfall_lookup.message)
+    if coefficient_lookup.status is not DataStatus.DATA_AVAILABLE:
+        warnings.append(coefficient_lookup.message)
+    warnings.extend(
+        [
+            storage.message,
+            recharge_quantity.message,
+            "Artificial recharge feasibility is incomplete because mandatory site evidence is missing.",
+            structure_sizing.message,
+        ]
+    )
 
-    recharge_message = None
-    if classification is None:
-        recharge_message = "Assessment unavailable for this combination. Engineering rule not configured yet."
-    elif structure is None:
-        recharge_message = "Recharge potential is available, but a structure rule is not configured."
+    source_ids = _unique(
+        [
+            "CGWB_MANUAL_AR_2007",
+            "BIS_IS_15797_2008",
+            *feasibility.source_ids,
+            *recharge_quantity.source_ids,
+            *structure_selection.source_ids,
+            *structure_sizing.source_ids,
+            *(rainfall_record.source_id for _ in [0] if rainfall_record),
+            *(coefficient_record.source_ids if coefficient_record else []),
+        ]
+    )
+    formula_assumptions = [
+        "Mean annual/normal rainfall represents an average year, not a design storm.",
+        "The runoff coefficient represents collection losses covered by its cited source and conditions.",
+    ]
 
     return AssessmentResponse(
         inputs=inputs,
         derived=DerivedData(
-            annualRainfallMm=annual_rainfall,
-            rainfallSource=rainfall.get("source") if rainfall else None,
-            runoffCoefficient=runoff,
+            annualRainfallMm=rainfall_value,
+            rainfallSource=(
+                f"IMD official dataset: {rainfall_record.dataset_version}"
+                if rainfall_record
+                else None
+            ),
+            runoffCoefficient=coefficient_value,
+            rainfallStatus=rainfall_lookup.status,
+            rainfall=rainfall_evidence,
+            runoffCoefficientStatus=coefficient_lookup.status,
+            runoffCoefficientEvidence=coefficient_evidence,
         ),
         rtrwh=RtrwhResult(
-            potentialLitresPerYear=potential,
-            recommendedSizeLitres=size,
-            sizingMessage=sizing_message,
+            potentialLitresPerYear=(
+                harvest.harvestable_volume.value if harvest else None
+            ),
+            recommendedSizeLitres=storage.recommended_litres,
+            sizingMessage=storage.message,
+            calculationStatus=(
+                DataStatus.DATA_AVAILABLE if harvest else DataStatus.INSUFFICIENT_DATA
+            ),
+            sizingStatus=storage.status.value,
+            sizingMethodId=storage.method_id,
+            sizingMissingInputs=list(storage.missing_inputs),
+            sizingSourceIds=list(storage.source_ids),
         ),
         artificialRecharge=ArtificialRechargeResult(
-            potential=classification,
-            potentialRechargeLitresPerYear=recharge_litres,
-            recommendedStructure=structure,
-            dimensions=dimensions,
-            message=recharge_message,
+            potential=None,
+            potentialRechargeLitresPerYear=(
+                recharge_quantity.potential_recharge_litres_per_year
+            ),
+            recommendedStructure=None,
+            dimensions=structure_sizing.dimensions,
+            message=recharge_quantity.message,
+            feasibilityStatus=feasibility.status.value,
+            criteria=[
+                FeasibilityCriterionResponse(
+                    criterion=criterion.criterion,
+                    result=criterion.result.value,
+                    observedValue=criterion.observed_value,
+                    requiredCondition=criterion.required_condition,
+                    reason=criterion.reason,
+                    sourceIds=list(criterion.source_ids),
+                )
+                for criterion in feasibility.criteria
+            ],
+            reasons=list(feasibility.reasons),
+            quantityStatus=recharge_quantity.status,
+            quantityMissingInputs=list(recharge_quantity.missing_inputs),
+            structureSelectionStatus=structure_selection.status,
+            alternativeStructures=list(structure_selection.alternative_structures),
+            selectionReasons=list(structure_selection.selection_reasons),
+            rejectedStructures=[],
+            structureMissingInputs=list(structure_selection.missing_inputs),
+            sizingStatus=structure_sizing.status,
+            sizingMissingInputs=list(structure_sizing.missing_inputs),
+            sourceIds=_unique(
+                [
+                    *feasibility.source_ids,
+                    *recharge_quantity.source_ids,
+                    *structure_selection.source_ids,
+                    *structure_sizing.source_ids,
+                ]
+            ),
         ),
-        rtrwhSuitability="SUITABLE" if potential is not None else "NOT ASSESSED",
-        dataCompleteness=completeness,
-        ruleset=ruleset.upper(),
-        isDemoData=ruleset == "demo",
+        rtrwhSuitability="SUITABILITY_NOT_DETERMINED",
+        dataCompleteness="INSUFFICIENT",
+        ruleset="SOURCE_BACKED",
+        isDemoData=False,
         formula=FormulaDetails(
-            expression="roof area (m²) × rainfall (mm/year) × runoff coefficient",
+            expression="rainfall (mm/year) × roof area (m²) × runoff coefficient",
             roofAreaM2=inputs.roofAreaM2,
-            annualRainfallMm=annual_rainfall,
-            runoffCoefficient=runoff,
+            annualRainfallMm=rainfall_value,
+            runoffCoefficient=coefficient_value,
+            methodId=(
+                harvest.method_id
+                if harvest
+                else "CGWB_MANUAL_2007_RTRWH_ANNUAL_VOLUME"
+            ),
+            grossRainfallVolumeLitres=(
+                harvest.gross_rainfall_volume.value if harvest else None
+            ),
+            estimatedLossesLitres=(harvest.estimated_losses.value if harvest else None),
+            harvestableVolumeLitres=(
+                harvest.harvestable_volume.value if harvest else None
+            ),
+            sourceIds=["CGWB_MANUAL_AR_2007"],
+            assumptions=formula_assumptions,
         ),
-        warnings=warnings,
+        warnings=_unique(warnings),
+        sources=citations_for(*source_ids),
     )

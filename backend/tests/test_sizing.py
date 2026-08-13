@@ -1,41 +1,30 @@
-import pytest
+from app.engineering.recharge.sizing import assess_structure_size
+from app.engineering.recharge.structure_selection import StructureSelectionResult
+from app.engineering.rtrwh.storage import assess_storage_size
 
-from app.calculations.sizing import recommended_storage_litres
-from app.rules.loader import load_rule
+
+def test_storage_does_not_use_annual_volume_as_tank_size() -> None:
+    result = assess_storage_size()
+
+    assert result.status.value == "INSUFFICIENT_DATA_FOR_SIZING"
+    assert result.recommended_litres is None
+    assert "event rainfall or rainfall distribution" in result.missing_inputs
+    assert "CGWB_MANUAL_AR_2007" in result.source_ids
 
 
-@pytest.mark.parametrize(
-    ("potential", "expected_size"),
-    [
-        (0, 0),
-        (100, 500),
-        (8_333, 500),
-        (8_334, 1_000),
-        (80_000, 5_000),
-        (400_000, 20_000),
-        (1_000_000, 20_000),
-    ],
-)
-def test_storage_sizing_rounds_up_and_honours_configured_cap(
-    potential: float, expected_size: float
-) -> None:
-    size, message = recommended_storage_litres(
-        potential, load_rule("rtrwh_sizing", "demo")
+def test_ar_dimensions_are_not_fabricated_without_structure_and_inputs() -> None:
+    selection = StructureSelectionResult(
+        status="INSUFFICIENT_DATA_FOR_SELECTION",
+        recommended_structure=None,
+        alternative_structures=(),
+        selection_reasons=(),
+        rejected_structures=(),
+        missing_inputs=("hydrogeology", "infiltration"),
+        source_ids=("CGWB_MANUAL_AR_2007",),
     )
-    assert size == expected_size
-    assert message is None
 
+    result = assess_structure_size(selection)
 
-@pytest.mark.parametrize(
-    "rules",
-    [
-        {},
-        {"storageFractionOfAnnualPotential": 0.06},
-        {"roundUpToLitres": 500},
-        load_rule("rtrwh_sizing", "production"),
-    ],
-)
-def test_missing_storage_rule_returns_explicit_unavailable_state(rules: dict) -> None:
-    size, message = recommended_storage_litres(80_000, rules)
-    assert size is None
-    assert message == "Assessment unavailable. Engineering sizing rule not configured yet."
+    assert result.status == "INSUFFICIENT_DATA_FOR_SIZING"
+    assert result.dimensions is None
+    assert result.missing_inputs == ("hydrogeology", "infiltration")

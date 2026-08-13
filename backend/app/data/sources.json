@@ -1,0 +1,114 @@
+{
+  "sources": [
+    {
+      "source_id": "CGWB_MANUAL_AR_2007",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "Manual on Artificial Recharge of Ground Water",
+      "document_version_or_year": "2007",
+      "section": "7.2.7, Table 7.2; 7.2.7.1; 7.2.7.2; 7.3.1; 7.3.2",
+      "page": "118–119",
+      "source_url": "https://cgwb.gov.in/sites/default/files/MainLinks/Manual-Artificial-Recharge.pdf",
+      "accessed_at": "2026-08-13",
+      "notes": "Primary source for Table 7.2 roof runoff coefficients, the rooftop water-availability equation, and the dependence of storage sizing on demand/event rainfall and rainfall distribution."
+    },
+    {
+      "source_id": "CGWB_GUIDE_AR",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "Guide on Artificial Recharge to Ground Water",
+      "document_version_or_year": "Publication available from CGWB",
+      "section": null,
+      "page": null,
+      "source_url": "https://cgwb.gov.in/cgwbpnm/public/uploads/documents/16861384061006484074file.pdf",
+      "accessed_at": "2026-08-13",
+      "notes": "Planning, investigation and design context. No universal residential threshold is encoded from this source without an exact applicable clause."
+    },
+    {
+      "source_id": "CGWB_MASTER_PLAN_AR_2020",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "Master Plan for Artificial Recharge to Groundwater in India",
+      "document_version_or_year": "2020",
+      "section": "National and state planning methodology",
+      "page": null,
+      "source_url": "https://cgwb.gov.in/cgwbpnm/public/uploads/documents/168613326251844776file.pdf",
+      "accessed_at": "2026-08-13",
+      "notes": "Macro planning source based on hydrogeology, water-level trends, subsurface storage and surplus runoff. State-specific planning assumptions are not universal household design rules."
+    },
+    {
+      "source_id": "CGWB_GEC_2015",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "Ground Water Resource Estimation Committee Methodology (GEC-2015)",
+      "document_version_or_year": "2015",
+      "section": null,
+      "page": null,
+      "source_url": "https://cgwb.gov.in/en/ground-water-resource-assessment-0",
+      "accessed_at": "2026-08-13",
+      "notes": "Assessment-unit groundwater-resource methodology; not used for household recharge-structure sizing."
+    },
+    {
+      "source_id": "CGWB_NAQUIM",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "National Aquifer Mapping and Management Programme",
+      "document_version_or_year": "Programme information current at access date",
+      "section": "Methodology and dissemination",
+      "page": null,
+      "source_url": "https://cgwb.gov.in/en/aquifer-mapping",
+      "accessed_at": "2026-08-13",
+      "notes": "Official source family for aquifer geometry, properties, groundwater behaviour, availability and quality. Individual imported features must identify their report and resolution."
+    },
+    {
+      "source_id": "IMD_NORMAL_RAINFALL_DATASET",
+      "authority": "India Meteorological Department (IMD)",
+      "document_title": "Official long-period normal rainfall dataset",
+      "document_version_or_year": "Not yet ingested",
+      "section": null,
+      "page": null,
+      "source_url": "https://mausam.imd.gov.in/responsive/rainfallinformation_swd.php?msg=M",
+      "accessed_at": "2026-08-13",
+      "notes": "Registry placeholder for an officially obtained annual-normal dataset. Every imported record must supply its actual dataset title, version/reference period and source record. Current daily rainfall is not a substitute."
+    },
+    {
+      "source_id": "IMD_PUBLIC_API_REFERENCE",
+      "authority": "India Meteorological Department (IMD)",
+      "document_title": "IMD Public API Reference",
+      "document_version_or_year": "Current at access date",
+      "section": "District and station rainfall services",
+      "page": null,
+      "source_url": "https://api.imd.gov.in/public/api_reference.html",
+      "accessed_at": "2026-08-13",
+      "notes": "Documents current observed/daily rainfall products. These endpoints are not used as annual-normal data."
+    },
+    {
+      "source_id": "BIS_IS_15797_2008",
+      "authority": "Bureau of Indian Standards (BIS)",
+      "document_title": "IS 15797:2008 Roof top rainwater harvesting — Guidelines",
+      "document_version_or_year": "2008; reaffirmed January 2023",
+      "section": null,
+      "page": null,
+      "source_url": "https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/pow_new/Pow/download_pow_pdf_dept_commtt/72/92/",
+      "accessed_at": "2026-08-13",
+      "notes": "Status verified through the BIS WRD 3 Programme of Work. Detailed clauses are not encoded until the standard text is lawfully available to the project."
+    },
+    {
+      "source_id": "BIS_IS_15792_2008",
+      "authority": "Bureau of Indian Standards (BIS)",
+      "document_title": "IS 15792:2008 Artificial recharge to ground water — Guidelines",
+      "document_version_or_year": "2008; reaffirmed January 2023; one amendment listed",
+      "section": null,
+      "page": null,
+      "source_url": "https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/pow_new/Pow/download_pow_pdf_dept_commtt/72/92/",
+      "accessed_at": "2026-08-13",
+      "notes": "Status verified through the BIS WRD 3 Programme of Work. Structure criteria and dimensions remain unsupported until the standard and amendment are reviewed."
+    },
+    {
+      "source_id": "BHUVAN_OGC_GUIDANCE",
+      "authority": "National Remote Sensing Centre (NRSC), ISRO",
+      "document_title": "Bhuvan WMS services guidance and Water Sector information",
+      "document_version_or_year": "Current at access date",
+      "section": "WMS/WMTS and Bhuvan Bhujal",
+      "page": null,
+      "source_url": "https://bhuvan.nrsc.gov.in/wiki/index.php/How_to_use_WMS_services",
+      "accessed_at": "2026-08-13",
+      "notes": "Only documented OGC/download services may be integrated. Interactive pages are not scraped, and restricted groundwater-prospect attributes are not assumed available."
+    }
+  ]
+}

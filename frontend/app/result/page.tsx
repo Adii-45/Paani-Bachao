@@ -59,6 +59,7 @@ export default function ResultPage() {
 
   const input = result.inputs;
   const arMessage = result.artificialRecharge.message;
+  const rechargeStatus = result.artificialRecharge.feasibilityStatus ?? result.artificialRecharge.potential;
 
   return (
     <main className="page-main results-main">
@@ -78,8 +79,8 @@ export default function ResultPage() {
           <span className="completion-icon" aria-hidden="true">✓</span>
           <div>
             <span>Assessment status</span>
-            <h2 id="completion-title">Preliminary Assessment Completed</h2>
-            <p>Review all sections below before using these indicative results for planning.</p>
+            <h2 id="completion-title">Preliminary Assessment Generated</h2>
+            <p>Unavailable results identify evidence or site information still required.</p>
           </div>
           <StatusBadge value={displayLabel(result.assessmentStatus)} />
         </section>
@@ -96,7 +97,7 @@ export default function ResultPage() {
             <div><dt>Roof Area</dt><dd>{input.roofAreaM2} m²</dd></div>
             <div><dt>Roof Material</dt><dd>{displayLabel(input.roofMaterial)}</dd></div>
             <div><dt>Soil Type</dt><dd>{displayLabel(input.soilType)}</dd></div>
-            <div><dt>Groundwater Depth</dt><dd>{input.groundwaterDepthM} metres</dd></div>
+            <div><dt>User-provided Groundwater Depth</dt><dd>{input.groundwaterDepthM} metres below ground level</dd></div>
             <div><dt>Available Ground Area</dt><dd>{input.availableGroundAreaM2} m²</dd></div>
           </dl>
         </ResultSection>
@@ -118,6 +119,12 @@ export default function ResultPage() {
                   <span>{input.roofAreaM2} m²</span><b>×</b><span>{value(result.derived.annualRainfallMm, " mm")}</span><b>×</b><span>{result.derived.runoffCoefficient ?? "Unavailable"}</span><b>=</b><strong>{value(result.rtrwh.potentialLitresPerYear, " L/year")}</strong>
                 </div>
                 <small>Rainfall source: {result.derived.rainfallSource ?? "Not configured"}</small>
+                {result.derived.rainfall?.message && <p>{result.derived.rainfall.message}</p>}
+                {result.derived.runoffCoefficientEvidence?.message && <p>{result.derived.runoffCoefficientEvidence.message}</p>}
+                {result.formula.grossRainfallVolumeLitres != null && (
+                  <p>Gross rainfall volume: {value(result.formula.grossRainfallVolumeLitres, " L/year")}. Estimated losses represented by the runoff coefficient: {value(result.formula.estimatedLossesLitres ?? null, " L/year")}.</p>
+                )}
+                {result.formula.methodId && <small>Method: {result.formula.methodId}</small>}
               </div>
             </details>
           </ResultSection>
@@ -137,12 +144,26 @@ export default function ResultPage() {
           <ResultSection title="Artificial Recharge Assessment" eyebrow="Site suitability">
             <div className="status-metric">
               <span>Artificial Recharge Potential</span>
-              <StatusBadge value={displayLabel(result.artificialRecharge.potential)} />
+              <StatusBadge value={displayLabel(rechargeStatus)} />
             </div>
             <dl className="supporting-values single-column">
               <div><dt>Water potentially available for recharge</dt><dd>{value(result.artificialRecharge.potentialRechargeLitresPerYear, " L/year")}</dd></div>
             </dl>
             {arMessage && <p className="unavailable-message">{arMessage}</p>}
+            {result.artificialRecharge.criteria && result.artificialRecharge.criteria.length > 0 && (
+              <details className="calculation-details">
+                <summary>Why is this the current result?</summary>
+                <div>
+                  <ul>
+                    {result.artificialRecharge.criteria.map((criterion) => (
+                      <li key={criterion.criterion}>
+                        <strong>{displayLabel(criterion.criterion)}:</strong> {criterion.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </details>
+            )}
             <p className="section-note">This is a preliminary on-spot assessment and does not replace site-specific hydrogeological investigation.</p>
           </ResultSection>
 
@@ -162,11 +183,26 @@ export default function ResultPage() {
             <p>{result.rtrwhSuitability === "SUITABLE" ? "The property shows preliminary potential for rooftop rainwater harvesting based on the configured dataset and rules." : "More configured engineering data is required to complete the rooftop rainwater assessment."}</p>
             <div className="status-table">
               <div><span>RTRWH suitability</span><StatusBadge value={displayLabel(result.rtrwhSuitability)} /></div>
-              <div><span>AR suitability</span><StatusBadge value={displayLabel(result.artificialRecharge.potential)} /></div>
+              <div><span>AR suitability</span><StatusBadge value={displayLabel(rechargeStatus)} /></div>
               <div><span>Data completeness</span><StatusBadge value={displayLabel(result.dataCompleteness)} /></div>
             </div>
           </div>
         </ResultSection>
+
+        {result.sources && result.sources.length > 0 && (
+          <ResultSection title="Methods and Sources" eyebrow="Provenance">
+            <p className="section-note">Sources listed here support the methods and data requirements shown in this assessment. Their presence does not mean an unavailable site value was inferred.</p>
+            <ul>
+              {result.sources.map((source) => (
+                <li key={source.sourceId}>
+                  <a href={source.sourceUrl}>{source.authority}: {source.documentTitle}</a>
+                  {source.section ? ` — ${source.section}` : ""}
+                  {source.page ? `, page ${source.page}` : ""}
+                </li>
+              ))}
+            </ul>
+          </ResultSection>
+        )}
 
         <InfoNotice title="Important disclaimer" tone="warning">
           <p>This tool provides a preliminary assessment based on the information provided and configured engineering datasets/rules. Final construction should follow applicable government guidelines and, where necessary, professional site assessment.</p>
