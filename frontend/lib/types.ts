@@ -186,6 +186,13 @@ export type AssessmentResult = {
     sourceIds?: string[];
     assumptions?: string[];
   };
+  environmentalData?: {
+    locationStatus: string;
+    rainfall: EnvironmentalProviderEvidence;
+    groundwater: EnvironmentalProviderEvidence;
+    soil: EnvironmentalProviderEvidence;
+    hydrogeology: EnvironmentalProviderEvidence;
+  };
   warnings: string[];
   sources?: Array<{
     sourceId: string;
@@ -196,6 +203,14 @@ export type AssessmentResult = {
     page: string | null;
     sourceUrl: string;
   }>;
+};
+
+type EnvironmentalProviderEvidence = {
+  status: string;
+  evidenceAvailable: boolean;
+  message: string;
+  sourceIds: string[];
+  componentStatuses: Record<string, string>;
 };
 
 export const labels: Record<string, string> = {

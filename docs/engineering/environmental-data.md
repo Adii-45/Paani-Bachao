@@ -1,6 +1,32 @@
-# Phase 1 environmental data layer
+# Phase 2 environmental data layer
 
-The assessment resolves a user location first, then invokes three independent local-cache providers. Runtime assessment requests do not call CGWB, NWIC, Bhuvan or another external environmental service.
+`EnvironmentalDataService` is the single assessment-time orchestration boundary. It
+resolves the user's text or supplied coordinates, then passes the resulting
+`NormalizedLocation` independently to rainfall, groundwater, soil and hydrogeology
+providers. `create_assessment` does not read a cache or implement a spatial matching
+rule directly. Runtime assessment requests do not call IMD, CGWB, NWIC or Bhuvan;
+the Nominatim resolver is the only default runtime network provider when coordinates
+are not supplied.
+
+```text
+LocationQuery
+  -> LocationResolver
+  -> NormalizedLocation (latitude/longitude + administrative metadata)
+  -> EnvironmentalDataService
+       -> NormalizedImdRainfallProvider
+       -> NormalizedCgwbGroundwaterProvider
+       -> NormalizedOfficialSoilProvider
+       -> NormalizedOfficialHydrogeologyProvider
+  -> independent typed lookup results
+  -> assessment engine
+```
+
+The API preserves detailed rainfall evidence under `derived.rainfall` and AR evidence
+under `artificialRecharge.environmentalProfile`. The additive `environmentalData`
+block provides a compact status, evidence-presence flag, message and source IDs for
+all four providers. Hydrogeology also reports geology, geomorphology, aquifer and
+groundwater-prospect statuses independently. Failure in one provider never supplies
+a value for another provider.
 
 ## Groundwater
 
@@ -174,3 +200,23 @@ operator must still verify the official source, version, layer and feature ident
 ## AR-engine boundary
 
 These providers supply environmental evidence to the later recharge engine. The engine still returns `INSUFFICIENT_DATA` when required infiltration, hydrogeology, water-balance or water-quality evidence is missing; it does not convert absent provider data into a score or default.
+
+## Supported and unavailable behaviour
+
+- Location text is geocoded through the replaceable `LocationResolver`; there is no
+  production city-to-coordinate dictionary. Explicit coordinates bypass remote
+  geocoding and remain labelled as user-provided coordinates.
+- Rainfall is looked up by coordinate against the 696 imported IMD district-normal
+  polygons. A missing polygon prevents the RTRWH calculation.
+- The bundled groundwater cache has one stale nearby observation. Other districts
+  remain unsupported; no district or national default is substituted.
+- The committed soil and hydrogeology caches are intentionally empty pending reviewed
+  official feature exports. Their providers return unavailable rather than using the
+  homeowner's soil selection or inferring subsurface attributes.
+- Provider/cache failures are isolated and returned as `PROVIDER_UNAVAILABLE`. An
+  unresolved location prevents all four environmental lookups.
+
+Import and refresh remain separate operator workflows. Rainfall refresh is documented
+in `rainfall-ingestion.md`; groundwater, soil and hydrogeology commands and source-
+review requirements are documented in the sections above. Run the cache validator
+after every import before using the data in an assessment.

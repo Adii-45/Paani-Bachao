@@ -1,15 +1,6 @@
 from collections.abc import Iterable
-from datetime import UTC, datetime
 
-from ..domain.ar_environment import (
-    AREnvironmentalProfile,
-    GroundwaterLookup,
-    HydrogeologyLookup,
-    SoilLookup,
-)
 from ..domain.environment import LocationQuery
-from ..domain.environment import RainfallLookup
-from ..domain.location import LocationResolutionStatus
 from ..domain.units import AreaSquareMeters, RainfallMM, RunoffCoefficient, VolumeLitres
 from ..engineering.recharge import (
     WaterQualityStatus,
@@ -25,23 +16,21 @@ from ..engineering.rtrwh import (
 )
 from ..provenance.models import DataQuality, DataStatus, ValueProvenance
 from ..provenance.registry import citations_for
-from ..providers.rainfall import NormalizedImdRainfallProvider
 from ..providers.environmental import (
     GroundwaterProvider,
     HydrogeologyProvider,
     SoilProvider,
 )
-from ..providers.groundwater import NormalizedCgwbGroundwaterProvider
-from ..providers.hydrogeology import NormalizedOfficialHydrogeologyProvider
-from ..providers.location import LocationResolver, NominatimLocationResolver
+from ..providers.location import LocationResolver
 from ..providers.rainfall.base import RainfallProvider
 from ..providers.runoff import SourceBackedRunoffCoefficientProvider
-from ..providers.soil import NormalizedOfficialSoilProvider
 from ..schemas import (
     ArtificialRechargeResult,
     AssessmentRequest,
     AssessmentResponse,
     DerivedData,
+    EnvironmentalDataEvidence,
+    EnvironmentalProviderEvidence,
     FeasibilityCriterionResponse,
     FormulaDetails,
     NormalizedLocationEvidence,
@@ -52,6 +41,7 @@ from ..schemas import (
     StoragePeriodResponse,
     StructureRecommendation,
 )
+from .environmental_data import EnvironmentalDataService
 
 
 def _unique(values: Iterable[str]) -> list[str]:
@@ -66,6 +56,7 @@ def create_assessment(
     groundwater_provider: GroundwaterProvider | None = None,
     soil_provider: SoilProvider | None = None,
     hydrogeology_provider: HydrogeologyProvider | None = None,
+    environmental_data_service: EnvironmentalDataService | None = None,
 ) -> AssessmentResponse:
     location_query = LocationQuery(
         location=inputs.location,
@@ -74,63 +65,23 @@ def create_assessment(
         state=inputs.state,
         district=inputs.district,
     )
-    location_resolution = (location_resolver or NominatimLocationResolver()).resolve(
-        location_query
-    )
+    environmental_data = (
+        environmental_data_service
+        or EnvironmentalDataService(
+            location_resolver=location_resolver,
+            rainfall_provider=rainfall_provider,
+            groundwater_provider=groundwater_provider,
+            soil_provider=soil_provider,
+            hydrogeology_provider=hydrogeology_provider,
+        )
+    ).collect(location_query)
+    location_resolution = environmental_data.location_resolution
     normalized_location = location_resolution.location
-    if (
-        location_resolution.status is LocationResolutionStatus.RESOLVED
-        and normalized_location is not None
-    ):
-        rainfall_lookup = (rainfall_provider or NormalizedImdRainfallProvider()).lookup(
-            normalized_location
-        )
-    else:
-        rainfall_lookup = RainfallLookup(
-            status=DataStatus.DATA_UNAVAILABLE,
-            error_code="LOCATION_NOT_RESOLVED",
-            message=(
-                "RainfallDataUnavailable: rainfall lookup was not attempted because "
-                f"the location was not resolved. {location_resolution.message}"
-            ),
-        )
-
-    environmental_profile = None
-    if normalized_location is not None:
-        groundwater_lookup = (
-            groundwater_provider or NormalizedCgwbGroundwaterProvider()
-        ).lookup(normalized_location)
-        soil_lookup = (soil_provider or NormalizedOfficialSoilProvider()).lookup(
-            normalized_location
-        )
-        hydrogeology_lookup = (
-            hydrogeology_provider or NormalizedOfficialHydrogeologyProvider()
-        ).lookup(normalized_location)
-        environmental_profile = AREnvironmentalProfile(
-            location=normalized_location,
-            groundwater=groundwater_lookup,
-            soil=soil_lookup,
-            hydrogeology=hydrogeology_lookup,
-            assembledAt=datetime.now(UTC),
-        )
-    else:
-        unavailable_message = (
-            "Environmental lookup was not attempted because the location was not resolved."
-        )
-        groundwater_lookup = GroundwaterLookup(
-            status=DataStatus.DATA_UNAVAILABLE, message=unavailable_message
-        )
-        soil_lookup = SoilLookup(
-            status=DataStatus.DATA_UNAVAILABLE, message=unavailable_message
-        )
-        hydrogeology_lookup = HydrogeologyLookup(
-            status=DataStatus.DATA_UNAVAILABLE,
-            geologyStatus=DataStatus.DATA_UNAVAILABLE,
-            geomorphologyStatus=DataStatus.DATA_UNAVAILABLE,
-            aquiferStatus=DataStatus.DATA_UNAVAILABLE,
-            groundwaterProspectStatus=DataStatus.DATA_UNAVAILABLE,
-            message=unavailable_message,
-        )
+    rainfall_lookup = environmental_data.rainfall
+    groundwater_lookup = environmental_data.groundwater
+    soil_lookup = environmental_data.soil
+    hydrogeology_lookup = environmental_data.hydrogeology
+    environmental_profile = environmental_data.ar_profile()
     coefficient_lookup = SourceBackedRunoffCoefficientProvider().lookup(
         inputs.roofMaterial.value
     )
@@ -575,6 +526,62 @@ def create_assessment(
             ),
             sourceIds=["CGWB_MANUAL_AR_2007"],
             assumptions=formula_assumptions,
+        ),
+        environmentalData=EnvironmentalDataEvidence(
+            locationStatus=location_resolution.status,
+            rainfall=EnvironmentalProviderEvidence(
+                status=rainfall_lookup.status,
+                evidenceAvailable=rainfall_record is not None,
+                message=rainfall_lookup.message,
+                sourceIds=([rainfall_record.source_id] if rainfall_record else []),
+            ),
+            groundwater=EnvironmentalProviderEvidence(
+                status=groundwater_lookup.status,
+                evidenceAvailable=provider_groundwater is not None,
+                message=groundwater_lookup.message,
+                sourceIds=(
+                    list(provider_groundwater.provenance.source_ids)
+                    if provider_groundwater
+                    else []
+                ),
+            ),
+            soil=EnvironmentalProviderEvidence(
+                status=soil_lookup.status,
+                evidenceAvailable=soil_lookup.information is not None,
+                message=soil_lookup.message,
+                sourceIds=(
+                    list(soil_lookup.information.provenance.source_ids)
+                    if soil_lookup.information
+                    else []
+                ),
+            ),
+            hydrogeology=EnvironmentalProviderEvidence(
+                status=hydrogeology_lookup.status,
+                evidenceAvailable=bool(
+                    hydrogeology_lookup.information or hydrogeology_lookup.features
+                ),
+                message=hydrogeology_lookup.message,
+                sourceIds=sorted(
+                    {
+                        source_id
+                        for feature in hydrogeology_lookup.features
+                        for source_id in feature.provenance.source_ids
+                    }
+                    | (
+                        set(hydrogeology_lookup.information.provenance.source_ids)
+                        if hydrogeology_lookup.information
+                        else set()
+                    )
+                ),
+                componentStatuses={
+                    "geology": hydrogeology_lookup.geology_status,
+                    "geomorphology": hydrogeology_lookup.geomorphology_status,
+                    "aquifer": hydrogeology_lookup.aquifer_status,
+                    "groundwaterProspect": (
+                        hydrogeology_lookup.groundwater_prospect_status
+                    ),
+                },
+            ),
         ),
         warnings=_unique(warnings),
         sources=citations_for(*source_ids),

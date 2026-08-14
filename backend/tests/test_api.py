@@ -60,6 +60,16 @@ def test_assessment_endpoint_returns_evidence_aware_contract(
     assert body["artificialRecharge"]["structureSelectionStatus"] == (
         "INSUFFICIENT_DATA_FOR_SELECTION"
     )
+    assert body["environmentalData"]["rainfall"]["status"] == "DATA_AVAILABLE"
+    assert body["environmentalData"]["rainfall"]["evidenceAvailable"] is True
+    assert body["environmentalData"]["groundwater"]["status"] == "DATA_STALE"
+    assert body["environmentalData"]["soil"]["status"] == "DATA_UNAVAILABLE"
+    assert body["environmentalData"]["hydrogeology"]["componentStatuses"] == {
+        "geology": "DATA_UNAVAILABLE",
+        "geomorphology": "DATA_UNAVAILABLE",
+        "aquifer": "DATA_UNAVAILABLE",
+        "groundwaterProspect": "DATA_UNAVAILABLE",
+    }
     assert body["ruleset"] == "SOURCE_BACKED"
     assert body["isDemoData"] is False
     assert body["sources"]
@@ -163,7 +173,7 @@ def test_location_resolution_failure_returns_typed_unavailable_result(
     valid_payload.pop("latitude")
     valid_payload.pop("longitude")
     monkeypatch.setattr(
-        "app.services.assessment.NominatimLocationResolver.resolve",
+        "app.services.environmental_data.NominatimLocationResolver.resolve",
         lambda _self, _query: LocationResolution(
             status=LocationResolutionStatus.NOT_RESOLVED,
             message="LocationNotResolved: fixture.",

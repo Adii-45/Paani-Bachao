@@ -118,6 +118,12 @@ infiltration, geology, geomorphology and aquifer fields remain explicitly unavai
 until reviewed official features are imported. See
 `docs/engineering/environmental-data.md` for sources, cache refresh and limitations.
 
+The assessment response also contains an additive `environmentalData` summary with
+independent statuses for rainfall, groundwater, soil and hydrogeology. A provider can
+be available, stale, unsupported or unavailable without another provider supplying a
+fallback. `EnvironmentalDataService` owns this orchestration; API routes and
+engineering calculations do not read environmental cache files directly.
+
 ## Scope
 
 This build intentionally has no authentication, profiles, inferred household-demand

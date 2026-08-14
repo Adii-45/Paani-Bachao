@@ -349,7 +349,7 @@ def test_published_cgwb_example_flows_through_assessment_with_provenance(
         message="Published worked-example coefficient.",
     )
     monkeypatch.setattr(
-        "app.services.assessment.NormalizedImdRainfallProvider.lookup",
+        "app.services.environmental_data.NormalizedImdRainfallProvider.lookup",
         lambda _self, _location: rainfall,
     )
     monkeypatch.setattr(
