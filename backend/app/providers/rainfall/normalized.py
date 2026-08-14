@@ -14,6 +14,12 @@ DEFAULT_DATASET_PATH = (
 )
 
 
+def _normalized_admin_name(value: str | None) -> str:
+    if not value:
+        return ""
+    return "".join(character for character in value.casefold() if character.isalnum())
+
+
 class NormalizedImdRainfallProvider:
     """Reads a versioned local cache imported from an official IMD dataset.
 
@@ -69,6 +75,28 @@ class NormalizedImdRainfallProvider:
                     "an imported IMD district-normal polygon."
                 ),
             )
+
+        # District polygons can overlap on their published boundaries. When the
+        # location resolver supplied matching administrative metadata, use that
+        # source-derived metadata to disambiguate instead of relying on record order.
+        if len(matches) > 1 and (location.district or location.state):
+            expected_district = _normalized_admin_name(location.district)
+            expected_state = _normalized_admin_name(location.state)
+            administrative_matches = [
+                record
+                for record in matches
+                if (
+                    not expected_district
+                    or _normalized_admin_name(record.district) == expected_district
+                )
+                and (
+                    not expected_state
+                    or _normalized_admin_name(record.state) == expected_state
+                )
+            ]
+            if len(administrative_matches) == 1:
+                matches = administrative_matches
+
         if len(matches) > 1:
             return RainfallLookup(
                 status=DataStatus.INSUFFICIENT_DATA,

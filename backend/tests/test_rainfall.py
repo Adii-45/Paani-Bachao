@@ -64,6 +64,27 @@ def write_dataset(path: Path, *, status: str = "DATA_AVAILABLE") -> None:
         path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def duplicate_polygon_record(
+    path: Path,
+    *,
+    district: str,
+    rainfall_mm: float,
+) -> None:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    duplicate = dict(payload["records"][0])
+    duplicate.update(
+        {
+            "record_id": f"fixture-{district}",
+            "location_name": district,
+            "district": district,
+            "rainfall_mm": rainfall_mm,
+            "source_record": f"fixture-{district}",
+        }
+    )
+    payload["records"].append(duplicate)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_spatial_lookup_preserves_rainfall_provenance(tmp_path: Path) -> None:
     dataset = tmp_path / "rainfall.json.gz"
     write_dataset(dataset)
@@ -109,6 +130,53 @@ def test_checked_in_imd_cache_resolves_bengaluru_coordinate() -> None:
     assert result.record.monthly_normal.source_id == (
         "IMD_DISTRICT_MONTHLY_NORMALS_1971_2020"
     )
+
+
+def test_checked_in_cache_resolves_multiple_locations_without_city_mapping() -> None:
+    provider = NormalizedImdRainfallProvider()
+    coordinates = (
+        (28.6139, 77.2090, "NEW DELHI"),
+        (19.0760, 72.8777, "MUMBAI CITY"),
+        (13.0827, 80.2707, "CHENNAI"),
+        (22.5726, 88.3639, "KOLKATA"),
+    )
+
+    for latitude, longitude, expected_district in coordinates:
+        result = provider.lookup(location(latitude=latitude, longitude=longitude))
+
+        assert result.status is DataStatus.DATA_AVAILABLE
+        assert result.record is not None
+        assert result.record.district == expected_district
+        assert result.record.rainfall_mm >= 0
+        assert result.record.source_id == "IMD_DISTRICT_ANNUAL_NORMALS_1971_2020"
+
+
+def test_overlapping_polygons_use_matching_administrative_metadata(tmp_path: Path) -> None:
+    dataset = tmp_path / "rainfall.json"
+    write_dataset(dataset)
+    duplicate_polygon_record(dataset, district="Other District", rainfall_mm=2000)
+
+    result = NormalizedImdRainfallProvider(dataset).lookup(location())
+
+    assert result.status is DataStatus.DATA_AVAILABLE
+    assert result.record is not None
+    assert result.record.district == "Example District"
+    assert result.record.rainfall_mm == 1000
+
+
+def test_overlapping_polygons_without_matching_metadata_remain_ambiguous(
+    tmp_path: Path,
+) -> None:
+    dataset = tmp_path / "rainfall.json"
+    write_dataset(dataset)
+    duplicate_polygon_record(dataset, district="Other District", rainfall_mm=2000)
+    unresolved_admin = location().model_copy(update={"district": None, "state": None})
+
+    result = NormalizedImdRainfallProvider(dataset).lookup(unresolved_admin)
+
+    assert result.status is DataStatus.INSUFFICIENT_DATA
+    assert result.record is None
+    assert result.error_code == "RAINFALL_LOCATION_AMBIGUOUS"
 
 
 def test_missing_dataset_never_falls_back_to_demo_values(tmp_path: Path) -> None:
