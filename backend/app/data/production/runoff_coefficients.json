@@ -1,9 +1,0 @@
-{
-  "materials": {
-    "RCC": {"runoffCoefficient": null},
-    "TILES": {"runoffCoefficient": null},
-    "METAL": {"runoffCoefficient": null},
-    "OTHER": {"runoffCoefficient": null},
-    "DONT_KNOW": {"runoffCoefficient": null}
-  }
-}

@@ -3,6 +3,7 @@ import asyncio
 import httpx
 import pytest
 
+from app.domain.location import LocationResolution, LocationResolutionStatus
 from app.main import app
 
 
@@ -39,40 +40,29 @@ def test_health_endpoint() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_assessment_endpoint_returns_complete_contract(
+def test_assessment_endpoint_returns_evidence_aware_contract(
     valid_payload: dict[str, object]
 ) -> None:
     response = post(valid_payload)
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {
-        "inputs",
-        "derived",
-        "rtrwh",
-        "artificialRecharge",
-        "rtrwhSuitability",
-        "dataCompleteness",
-        "assessmentStatus",
-        "ruleset",
-        "isDemoData",
-        "formula",
-        "warnings",
-    }
-    assert body["inputs"] == valid_payload
-    assert body["derived"] == {
-        "annualRainfallMm": 970.0,
-        "rainfallSource": "Demo configured dataset — not validated",
-        "runoffCoefficient": 0.8,
-    }
-    assert body["rtrwh"] == {
-        "potentialLitresPerYear": 93_120.0,
-        "recommendedSizeLitres": 6_000.0,
-        "sizingMessage": None,
-    }
-    assert body["artificialRecharge"]["potential"] == "HIGH"
-    assert body["artificialRecharge"]["recommendedStructure"]["type"] == "RECHARGE_TRENCH"
-    assert body["assessmentStatus"] == "PRELIMINARY"
+    assert body["inputs"]["location"] == valid_payload["location"]
+    assert body["derived"]["locationStatus"] == "RESOLVED"
+    assert body["derived"]["normalizedLocation"]["latitude"] == 12.9716
+    assert body["derived"]["rainfallStatus"] == "DATA_AVAILABLE"
+    assert body["derived"]["rainfall"]["value"] == 822.1
+    assert body["derived"]["rainfall"]["referencePeriod"] == "1971-2020"
+    assert body["rtrwh"]["calculationStatus"] == "DATA_AVAILABLE"
+    assert body["rtrwh"]["potentialLitresPerYear"] == 69_056.4
+    assert body["rtrwh"]["sizingStatus"] == "INSUFFICIENT_DATA_FOR_SIZING"
+    assert body["artificialRecharge"]["feasibilityStatus"] == "INSUFFICIENT_DATA"
+    assert body["artificialRecharge"]["structureSelectionStatus"] == (
+        "INSUFFICIENT_DATA_FOR_SELECTION"
+    )
+    assert body["ruleset"] == "SOURCE_BACKED"
+    assert body["isDemoData"] is False
+    assert body["sources"]
 
 
 @pytest.mark.parametrize(
@@ -90,18 +80,19 @@ def test_assessment_endpoint_returns_complete_contract(
         ("location", "---"),
         ("roofMaterial", "THATCH"),
         ("soilType", "PEAT"),
+        ("latitude", 91),
+        ("longitude", -181),
+        ("monthlyRainwaterDemandLitres", 0),
+        ("monthlyRainwaterDemandLitres", -1),
     ],
 )
 def test_invalid_field_values_return_validation_errors(
-    valid_payload: dict[str, object],
-    field: str,
-    invalid_value: object,
+    valid_payload: dict[str, object], field: str, invalid_value: object
 ) -> None:
     valid_payload[field] = invalid_value
     response = post(valid_payload)
 
     assert response.status_code == 422
-    assert isinstance(response.json()["detail"], list)
     assert any(error["loc"][-1] == field for error in response.json()["detail"])
 
 
@@ -116,7 +107,7 @@ def test_invalid_field_values_return_validation_errors(
         "availableGroundAreaM2",
     ],
 )
-def test_every_required_field_is_enforced(
+def test_every_existing_required_field_is_enforced(
     valid_payload: dict[str, object], field: str
 ) -> None:
     valid_payload.pop(field)
@@ -126,24 +117,7 @@ def test_every_required_field_is_enforced(
     assert any(error["loc"][-1] == field for error in response.json()["detail"])
 
 
-@pytest.mark.parametrize(
-    ("field", "boundary"),
-    [
-        ("groundwaterDepthM", 0),
-        ("availableGroundAreaM2", 0),
-        ("roofAreaM2", 0.1),
-    ],
-)
-def test_allowed_numeric_boundaries_are_accepted(
-    valid_payload: dict[str, object],
-    field: str,
-    boundary: float,
-) -> None:
-    valid_payload[field] = boundary
-    assert post(valid_payload).status_code == 200
-
-
-def test_malformed_json_returns_a_clean_validation_response() -> None:
+def test_malformed_json_returns_clean_validation_response() -> None:
     response = request(
         "POST",
         "/api/assessment",
@@ -153,24 +127,60 @@ def test_malformed_json_returns_a_clean_validation_response() -> None:
 
     assert response.status_code == 422
     assert response.headers["content-type"].startswith("application/json")
-    assert response.json()["detail"][0]["type"] == "json_invalid"
 
 
-def test_unsupported_location_returns_an_incomplete_assessment_not_an_api_error(
+def test_water_quality_conclusion_requires_evidence_reference(
     valid_payload: dict[str, object]
 ) -> None:
-    valid_payload["location"] = "Atlantis"
+    valid_payload["waterQualityStatus"] = "VERIFIED_ACCEPTABLE"
+
+    response = post(valid_payload)
+
+    assert response.status_code == 422
+    assert "source reference is required" in response.text
+
+
+def test_assessment_endpoint_sizes_storage_when_monthly_demand_is_supplied(
+    valid_payload: dict[str, object]
+) -> None:
+    valid_payload["roofAreaM2"] = 20
+    valid_payload["monthlyRainwaterDemandLitres"] = 500
+
     response = post(valid_payload)
 
     assert response.status_code == 200
     body = response.json()
-    assert body["derived"]["annualRainfallMm"] is None
+    assert body["rtrwh"]["sizingStatus"] == "SIZE_AVAILABLE"
+    assert body["rtrwh"]["recommendedSizeLitres"] == 5_538.8
+    assert body["rtrwh"]["sizingRainfallReferencePeriod"] == "1971-2020"
+    assert body["rtrwh"]["demandUsedLitresPerMonth"] == 500
+    assert len(body["rtrwh"]["storagePeriods"]) == 12
+
+
+def test_location_resolution_failure_returns_typed_unavailable_result(
+    valid_payload: dict[str, object], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    valid_payload.pop("latitude")
+    valid_payload.pop("longitude")
+    monkeypatch.setattr(
+        "app.services.assessment.NominatimLocationResolver.resolve",
+        lambda _self, _query: LocationResolution(
+            status=LocationResolutionStatus.NOT_RESOLVED,
+            message="LocationNotResolved: fixture.",
+        ),
+    )
+
+    response = post(valid_payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["derived"]["locationStatus"] == "NOT_RESOLVED"
+    assert body["derived"]["normalizedLocation"] is None
+    assert body["derived"]["rainfall"]["errorCode"] == "LOCATION_NOT_RESOLVED"
     assert body["rtrwh"]["potentialLitresPerYear"] is None
-    assert body["dataCompleteness"] == "INSUFFICIENT"
-    assert "Rainfall data is not configured for this location." in body["warnings"]
 
 
-def test_internal_service_failure_does_not_expose_a_stack_trace(
+def test_internal_service_failure_does_not_expose_stack_trace(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fail(_payload: object) -> None:

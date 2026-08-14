@@ -50,6 +50,9 @@ export default function AssessmentPage() {
     setSubmitting(true);
     setError("");
     const form = new FormData(event.currentTarget);
+    const monthlyDemand = String(form.get("monthlyRainwaterDemandLitres") ?? "").trim();
+    const basement = String(form.get("buildingHasBasement") ?? "").trim();
+    const waterQualityEvidence = String(form.get("waterQualityEvidence") ?? "").trim();
     const payload = {
       location: form.get("location"),
       roofAreaM2: Number(form.get("roofAreaM2")),
@@ -57,6 +60,10 @@ export default function AssessmentPage() {
       soilType: form.get("soilType"),
       groundwaterDepthM: Number(form.get("groundwaterDepthM")),
       availableGroundAreaM2: Number(form.get("availableGroundAreaM2")),
+      monthlyRainwaterDemandLitres: monthlyDemand ? Number(monthlyDemand) : undefined,
+      buildingHasBasement: basement ? basement === "true" : undefined,
+      waterQualityStatus: form.get("waterQualityStatus") || "NOT_VERIFIED",
+      waterQualityEvidence: waterQualityEvidence || undefined,
     };
 
     try {
@@ -100,23 +107,19 @@ export default function AssessmentPage() {
               <div><h2>Property and rooftop details</h2><p>Information used to estimate available rooftop runoff.</p></div>
             </header>
             <div className="form-grid">
-              <FormField id="location" label="Location / Locality" helper="Select a city covered by the configured rainfall dataset." className="field-wide">
-                <select id="location" name="location" required defaultValue={savedInputs?.location ?? ""} aria-describedby="location-help">
-                  <option value="" disabled>Select city / locality</option>
-                  <option value="Bengaluru">Bengaluru</option>
-                  <option value="Chennai">Chennai</option>
-                  <option value="Delhi">Delhi</option>
-                  <option value="Hyderabad">Hyderabad</option>
-                  <option value="Mumbai">Mumbai</option>
-                </select>
+              <FormField id="location" label="Location / Locality" helper="Resolved to coordinates, then matched against the installed official rainfall dataset." className="field-wide">
+                <input id="location" name="location" type="text" required maxLength={120} defaultValue={savedInputs?.location ?? ""} placeholder="Enter city, district or locality" aria-describedby="location-help" />
               </FormField>
               <FormField id="roofAreaM2" label="Roof Area" helper="Enter the approximate rooftop catchment area.">
-                <div className="control-with-unit"><input id="roofAreaM2" name="roofAreaM2" type="number" min="0.1" max="100000" step="0.1" required defaultValue={savedInputs?.roofAreaM2 ?? ""} aria-describedby="roofAreaM2-help" /><span>m²</span></div>
+                <div className="control-with-unit"><input id="roofAreaM2" name="roofAreaM2" type="number" min="0.1" max="100000" step="0.1" required defaultValue={savedInputs?.roofAreaM2 ?? ""} placeholder="Enter roof area in square metres" aria-describedby="roofAreaM2-help" /><span>m²</span></div>
               </FormField>
               <FormField id="roofMaterial" label="Roof Material" helper="Used to look up the configured runoff coefficient.">
                 <select id="roofMaterial" name="roofMaterial" required defaultValue={savedInputs?.roofMaterial ?? ""} aria-describedby="roofMaterial-help">
-                  <option value="" disabled>Select roof material</option><option value="RCC">RCC / Concrete</option><option value="TILES">Tiles</option><option value="METAL">Metal sheet</option><option value="OTHER">Other</option><option value="DONT_KNOW">Don&apos;t know</option>
+                  <option value="" disabled>Select roof material</option><option value="RCC">RCC / Concrete</option><option value="TILES">Tiles</option><option value="METAL">GI sheet (galvanized iron)</option><option value="OTHER">Other</option><option value="DONT_KNOW">Don&apos;t know</option>
                 </select>
+              </FormField>
+              <FormField id="monthlyRainwaterDemandLitres" label="Planned Monthly Rainwater Use" helper="Optional. Enter how many litres you plan to draw from the tank each month; required for tank sizing." className="field-wide">
+                <div className="control-with-unit"><input id="monthlyRainwaterDemandLitres" name="monthlyRainwaterDemandLitres" type="number" min="0.1" max="10000000" step="0.1" defaultValue={savedInputs?.monthlyRainwaterDemandLitres ?? ""} placeholder="Enter planned rainwater use per month" aria-describedby="monthlyRainwaterDemandLitres-help" /><span>litres/month</span></div>
               </FormField>
             </div>
           </div>
@@ -133,10 +136,23 @@ export default function AssessmentPage() {
                 </select>
               </FormField>
               <FormField id="groundwaterDepthM" label="Groundwater Depth" helper="Approximate depth from ground surface to groundwater level.">
-                <div className="control-with-unit"><input id="groundwaterDepthM" name="groundwaterDepthM" type="number" min="0" max="1000" step="0.1" required defaultValue={savedInputs?.groundwaterDepthM ?? ""} aria-describedby="groundwaterDepthM-help" /><span>metres</span></div>
+                <div className="control-with-unit"><input id="groundwaterDepthM" name="groundwaterDepthM" type="number" min="0" max="1000" step="0.1" required defaultValue={savedInputs?.groundwaterDepthM ?? ""} placeholder="Enter depth in metres below ground level" aria-describedby="groundwaterDepthM-help" /><span>metres</span></div>
               </FormField>
               <FormField id="availableGroundAreaM2" label="Available Ground Area" helper="Open area that could accommodate a recharge structure.">
-                <div className="control-with-unit"><input id="availableGroundAreaM2" name="availableGroundAreaM2" type="number" min="0" max="100000" step="0.1" required defaultValue={savedInputs?.availableGroundAreaM2 ?? ""} aria-describedby="availableGroundAreaM2-help" /><span>m²</span></div>
+                <div className="control-with-unit"><input id="availableGroundAreaM2" name="availableGroundAreaM2" type="number" min="0" max="100000" step="0.1" required defaultValue={savedInputs?.availableGroundAreaM2 ?? ""} placeholder="Enter available open area in square metres" aria-describedby="availableGroundAreaM2-help" /><span>m²</span></div>
+              </FormField>
+              <FormField id="buildingHasBasement" label="Building Basement" helper="Some source-backed recharge designs do not apply to buildings with basements.">
+                <select id="buildingHasBasement" name="buildingHasBasement" defaultValue={savedInputs?.buildingHasBasement === undefined ? "" : String(savedInputs.buildingHasBasement)} aria-describedby="buildingHasBasement-help">
+                  <option value="">Select if known</option><option value="false">No basement</option><option value="true">Has a basement</option>
+                </select>
+              </FormField>
+              <FormField id="waterQualityStatus" label="Recharge Water Quality Review" helper="Do not mark acceptable unless a qualified test or review supports it.">
+                <select id="waterQualityStatus" name="waterQualityStatus" defaultValue={savedInputs?.waterQualityStatus ?? "NOT_VERIFIED"} aria-describedby="waterQualityStatus-help">
+                  <option value="NOT_VERIFIED">Not yet verified</option><option value="VERIFIED_ACCEPTABLE">Reviewed as acceptable</option><option value="UNSUITABLE">Review found unsuitable</option>
+                </select>
+              </FormField>
+              <FormField id="waterQualityEvidence" label="Water Quality Evidence" helper="Required only when recording a reviewed conclusion; enter the report, reviewer or source reference.">
+                <input id="waterQualityEvidence" name="waterQualityEvidence" type="text" maxLength={300} defaultValue={savedInputs?.waterQualityEvidence ?? ""} placeholder="Enter report or review reference if applicable" aria-describedby="waterQualityEvidence-help" />
               </FormField>
             </div>
           </div>
@@ -155,8 +171,8 @@ export default function AssessmentPage() {
           <h2>Before you begin</h2>
           <ul>
             <li>Use the horizontal catchment area of your roof.</li>
-            <li>Approximate site values are acceptable for this preliminary assessment.</li>
-            <li>No household demand or consumption data is required.</li>
+            <li>User estimates are identified as user-provided and are not presented as measured data.</li>
+            <li>Monthly planned rainwater use is optional, but a tank size cannot be calculated without it.</li>
           </ul>
           <InfoNotice title="Data use">
             <p>Your entries are used only to calculate the current assessment and are retained in this browser session.</p>

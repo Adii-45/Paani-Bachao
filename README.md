@@ -1,17 +1,19 @@
 # Paani Bachao
 
-Paani Bachao is a focused MVP for preliminary residential rooftop rainwater harvesting (RTRWH) and artificial recharge (AR) assessment. A homeowner enters six simple site details and receives a transparent, deterministic result.
+Paani Bachao is a preliminary residential rooftop rainwater harvesting (RTRWH) and artificial recharge (AR) assessment application. Its engineering engine is evidence-first: it returns an unavailable or insufficient-data result rather than silently substituting an unsupported environmental value or design rule.
 
-> The repository ships with an explicitly marked **demo ruleset** so the complete flow can be tried locally. Those values are not validated engineering data and must not be used for construction. The production ruleset is intentionally empty.
+> An imported IMD 1971-2020 district rainfall-normal record and an applicable CGWB Table 7.2 roof coefficient must both be available before annual rooftop harvest is calculated. Tank sizing additionally requires all 12 monthly normals and an explicit user-entered monthly demand. Artificial-recharge recommendations remain unavailable until their documented engineering inputs are present.
 
 ## Architecture
 
 - `frontend/` — Next.js 16 + TypeScript user interface
-- `backend/` — FastAPI API, validation, calculation modules, and rule loading
-- `backend/app/data/demo/` — isolated, unvalidated development values
-- `backend/app/data/production/` — configurable placeholders for validated data
+- `backend/` — FastAPI API, normalized domain types, provider interfaces, source-backed engineering methods, and tests
+- `backend/app/data/sources.json` — machine-readable engineering source registry
+- `backend/app/data/normalized/` — versioned official datasets imported into the normalized provider format
+- `backend/app/data/source_backed/` — engineering records that include source and selection provenance
+- `docs/engineering/` — source audit, proposed model, limitations, and ingestion instructions
 
-Calculation code is independent of API and UI code. Rainfall access, runoff coefficients, recharge classification, storage sizing, structure selection, and dimensions are all configuration-driven.
+Environmental providers are independent of engineering calculations and API/UI code. The core engine receives normalized values with provenance, source version, spatial/temporal resolution, and data-quality metadata.
 
 ## Run locally
 
@@ -40,7 +42,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Suggested demo locations are Bengaluru, Chennai, Delhi, Hyderabad, and Mumbai.
+Open `http://localhost:3000`. Text locations are resolved to coordinates through a replaceable geocoder, then matched locally against the committed IMD district-normal polygons. Rainfall lookup does not call a weather service and has no fabricated fallback.
 
 ## Developer checks
 
@@ -76,17 +78,11 @@ npm run build
 
 CI runs automatically on pushes and pull requests to `main`. Separate frontend and backend jobs check linting, types, tests, application imports, and the production build using the repository's existing npm and Python dependency files.
 
-## Rulesets
+## Engineering data and provenance
 
-Development defaults to the `demo` ruleset. Every API response using it includes `isDemoData: true` and the warning `DEMO / DEVELOPMENT VALUE — NOT VALIDATED`.
+The source matrix and removed-assumption audit are in [`docs/engineering/source-audit.md`](docs/engineering/source-audit.md). The calculation/data model is documented in [`docs/engineering/proposed-model.md`](docs/engineering/proposed-model.md).
 
-To run with the intentionally empty production placeholders:
-
-```bash
-RAINASSESS_RULESET=production uvicorn app.main:app --reload --port 8000
-```
-
-Add reviewed data to `backend/app/data/production/` without changing calculation code. Do not copy the demo values into production. Unknown or missing values produce an unavailable/incomplete result instead of a fabricated estimate.
+The selected IMD product, committed normalized cache, provenance fields and guarded refresh command are documented in [`docs/engineering/rainfall-ingestion.md`](docs/engineering/rainfall-ingestion.md).
 
 ## API
 
@@ -99,12 +95,33 @@ Add reviewed data to `backend/app/data/production/` without changing calculation
   "roofMaterial": "RCC",
   "soilType": "SANDY_LOAM",
   "groundwaterDepthM": 8,
-  "availableGroundAreaM2": 15
+  "availableGroundAreaM2": 15,
+  "monthlyRainwaterDemandLitres": 500
 }
 ```
 
 Validation rejects empty locations, non-positive roof areas, negative groundwater/ground areas, and unsupported material or soil enums.
 
+`monthlyRainwaterDemandLitres` is optional and is needed only for tank sizing; it is
+the user's planned constant monthly rainwater use and has no pre-populated default.
+Other optional API fields support coordinate/administrative disambiguation (`latitude`,
+`longitude`, `state`, `district`) and groundwater observation metadata
+(`groundwaterObservationDate`, `groundwaterObservationSeason`,
+`groundwaterObservationMethod`, `groundwaterSource`). The application never inserts
+values into these fields or presents an application-supplied value as user input.
+
+Environmental evidence for artificial recharge is resolved independently after
+location normalization. The bundled groundwater cache contains one stale CGWB
+Bengaluru Urban monitoring observation for exercising the source-traceable flow;
+it is labelled as a nearby observation, not a property measurement. Soil,
+infiltration, geology, geomorphology and aquifer fields remain explicitly unavailable
+until reviewed official features are imported. See
+`docs/engineering/environmental-data.md` for sources, cache refresh and limitations.
+
 ## Scope
 
-This build intentionally has no authentication, profiles, demand modelling, reports, government integration, AI, GIS, payments, sensors, or other post-MVP functionality.
+This build intentionally has no authentication, profiles, inferred household-demand
+model, reports, government integration, AI, payments, sensors, or other post-assessment
+functionality. Tank sizing uses only the explicit monthly planned-use value when the
+user supplies it. Provider boundaries exist for future official GIS data, but no
+undocumented or scraped Bhuvan service is called.

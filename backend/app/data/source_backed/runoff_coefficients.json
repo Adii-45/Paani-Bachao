@@ -1,0 +1,60 @@
+{
+  "dataset_status": "DATA_AVAILABLE",
+  "records": [
+    {
+      "roof_type": "RCC",
+      "value_range": {
+        "published_min": 0.7,
+        "published_max": 0.7,
+        "selected_value": 0.7,
+        "selection_method": "Direct value for concrete roofs in CGWB Manual Table 7.2"
+      },
+      "condition": "Concrete roof as classified by CGWB Manual Table 7.2",
+      "source_ids": ["CGWB_MANUAL_AR_2007"],
+      "provenance": {
+        "quality": "ENGINEERING_DEFAULT",
+        "source_ids": ["CGWB_MANUAL_AR_2007"],
+        "source_record": "Table 7.2, document page 118",
+        "source_date_or_version": "2007",
+        "notes": "Applied only when the user explicitly selects RCC / concrete."
+      }
+    },
+    {
+      "roof_type": "TILES",
+      "value_range": {
+        "published_min": 0.75,
+        "published_max": 0.75,
+        "selected_value": 0.75,
+        "selection_method": "Direct value for tiled roofs in CGWB Manual Table 7.2"
+      },
+      "condition": "Tiled roof as classified by CGWB Manual Table 7.2",
+      "source_ids": ["CGWB_MANUAL_AR_2007"],
+      "provenance": {
+        "quality": "ENGINEERING_DEFAULT",
+        "source_ids": ["CGWB_MANUAL_AR_2007"],
+        "source_record": "Table 7.2, document page 118",
+        "source_date_or_version": "2007",
+        "notes": "Applied only when the user explicitly selects tiles."
+      }
+    },
+    {
+      "roof_type": "METAL",
+      "value_range": {
+        "published_min": 0.9,
+        "published_max": 0.9,
+        "selected_value": 0.9,
+        "selection_method": "Direct value for GI sheet roofs in CGWB Manual Table 7.2"
+      },
+      "condition": "Galvanized iron (GI) sheet roof; not an unspecified metal surface",
+      "source_ids": ["CGWB_MANUAL_AR_2007"],
+      "provenance": {
+        "quality": "ENGINEERING_DEFAULT",
+        "source_ids": ["CGWB_MANUAL_AR_2007"],
+        "source_record": "Table 7.2, document page 118",
+        "source_date_or_version": "2007",
+        "notes": "The frontend label is restricted to GI sheet so the published condition is explicit."
+      }
+    }
+  ],
+  "notes": "Values are direct CGWB Manual Table 7.2 material values. No midpoint or application-selected coefficient is used."
+}

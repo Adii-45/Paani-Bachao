@@ -60,6 +60,29 @@ describe("property assessment form", () => {
     expect(screen.getAllByRole("option", { name: "Don't know" })).toHaveLength(2);
     expect(screen.getByLabelText(/Roof Area/)).toHaveAttribute("min", "0.1");
     expect(screen.getByLabelText(/Groundwater Depth/)).toHaveAttribute("min", "0");
+    expect(screen.getByLabelText(/Planned Monthly Rainwater Use/)).not.toBeRequired();
+    expect(screen.getByLabelText(/Building Basement/)).not.toBeRequired();
+    expect(screen.getByLabelText(/Recharge Water Quality Review/)).toHaveValue("NOT_VERIFIED");
+  });
+
+  it("sends optional planned monthly use when the user requests tank sizing", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => successfulResult,
+    }));
+    render(<AssessmentPage />);
+    fillValidForm();
+    fireEvent.change(screen.getByLabelText(/Planned Monthly Rainwater Use/), {
+      target: { value: "500" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Calculate Assessment/ }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/result"));
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(request.body as string)).toMatchObject({
+      monthlyRainwaterDemandLitres: 500,
+    });
   });
 
   it("uses native constraints to stop an invalid form before an API request", () => {
@@ -103,6 +126,7 @@ describe("property assessment form", () => {
         soilType: "SANDY_LOAM",
         groundwaterDepthM: 8,
         availableGroundAreaM2: 15,
+        waterQualityStatus: "NOT_VERIFIED",
       }),
     });
 
@@ -121,6 +145,7 @@ describe("property assessment form", () => {
       soilType: "SANDY_LOAM",
       groundwaterDepthM: 8,
       availableGroundAreaM2: 15,
+      waterQualityStatus: "NOT_VERIFIED",
     });
     expect(JSON.parse(sessionStorage.getItem("rainassess-result") ?? "null")).toEqual(
       successfulResult,
