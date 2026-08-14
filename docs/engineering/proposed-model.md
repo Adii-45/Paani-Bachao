@@ -19,8 +19,9 @@ roof area + source-backed roof coefficient
 gross rainfall volume and harvestable rooftop runoff
         |
         +----> storage strategy
-        |         event rainfall / rainfall distribution / demand missing
-        |         => INSUFFICIENT_DATA_FOR_SIZING
+        |         12 IMD monthly normals + explicit monthly demand
+        |         => IRICEN July-to-June cumulative-surplus method
+        |         => capacity or an explicit unavailable state
         |
         +----> water-allocation balance
                   storage/use + documented losses + overflow allocation missing
@@ -69,7 +70,7 @@ No result is calculated when rainfall or a supported coefficient is absent.
 
 ## Rainfall
 
-The current five-city values are removed from the primary engine. The replacement is a provider over IMD's **All India Districtwise Rainfall Normals (1971-2020) — Annual** map. The committed normalized cache contains the 696 district features published in the accessed official layer. A record carries:
+The current five-city values are removed from the primary engine. The replacement is a provider over IMD's **All India Districtwise Rainfall Normals (1971-2020)** annual and January-to-December monthly maps. The committed normalized cache contains the 696 district features published in each accessed official layer. A record carries:
 
 - `rainfall_mm`;
 - `statistic_type` (for this method, a long-period/normal annual statistic);
@@ -78,6 +79,8 @@ The current five-city values are removed from the primary engine. The replacemen
 - source dataset title/version/record;
 - retrieval/import timestamp;
 - data-quality category.
+- all 12 monthly normals and their individual source URLs/digests when the monthly
+  feature set is complete and administratively consistent with the annual record.
 
 The IMD public API's current observed/daily rainfall is not silently treated as a long-period annual normal. The importer preserves the published district geometry, source feature ID, source URL, 1971-2020 reference period, import timestamp and source-file digest. Assessment-time lookup uses resolved coordinates against that local geometry, with no rainfall network call and no manufactured fallback.
 
@@ -95,15 +98,27 @@ Each coefficient record includes its published value, condition, selection metho
 
 ## Storage sizing
 
-Annual harvesting potential and storage capacity are separate outputs. The CGWB Manual §7.2.7.2 states that urban storage may be based on rainfall in a single event, and §7.3.2 notes that rainfall distribution affects storage requirements. A demand/reliability strategy additionally needs intended use, demand and dry-period/reliability inputs.
+Annual harvesting potential and storage capacity are separate outputs. The implemented
+method is the monthly cumulative-surplus method published in Indian Railways Institute
+of Civil Engineering's *Rain Water Harvesting* (November 2022), §2.2.8.1, pages 41-42.
+It orders a normal year from July through June, calculates monthly rooftop yield from
+rainfall, area and runoff coefficient, subtracts a constant explicit monthly demand,
+and selects the maximum positive cumulative surplus as capacity.
 
-The current inputs do not contain an official event-rainfall series, demand or allocation information. The primary strategy therefore returns:
+The API accepts optional `monthlyRainwaterDemandLitres`. This value is user-provided;
+the application does not infer demand or insert a norm. When demand and all 12 official
+monthly normals are available, the result includes the recommended capacity and a
+finite-tank normal-year simulation (supply, unmet demand, overflow and depletion
+months). These are climatological normal-year metrics, not a probabilistic reliability
+guarantee. When demand or monthly data are absent, the strategy returns:
 
 ```text
 INSUFFICIENT_DATA_FOR_SIZING
 ```
 
-with the missing inputs and applicable source IDs. It does not use the former 6%, 500 L increment or 20,000 L cap.
+with the missing inputs and applicable source IDs. Zero rainfall and a series with no
+positive cumulative surplus also return explicit non-recommendation states. The method
+does not use the former 6%, 500 L increment or 20,000 L cap.
 
 ## Available water for recharge
 
@@ -151,10 +166,10 @@ Each future structure will have an independent sizing strategy with its own requ
 | --- | --- |
 | User input | Roof area, descriptive roof material/soil, undated groundwater-depth estimate and open area; retained as `USER_PROVIDED` and never relabelled as measured |
 | Live external data | Nominatim text geocoding when the request does not already contain coordinates; no environmental value comes from it |
-| Official periodically imported data | IMD 1971-2020 annual district normals and future CGWB/NAQUIM/NRSC layers, normalized and versioned |
-| Cached data | 696 imported IMD district polygons/normal values with original feature ID, period, URL, digest and retrieval timestamp |
+| Official periodically imported data | IMD 1971-2020 annual and monthly district normals and future CGWB/NAQUIM/NRSC layers, normalized and versioned |
+| Cached data | 696 imported IMD district polygons with annual/monthly normals, original feature IDs, period, URLs, digests and retrieval timestamp |
 | Source-backed configuration | Source registry and future coefficient/decision records with clause/page provenance |
-| Derived calculation | Unit-safe rainfall volume and rooftop harvest when required evidence exists |
+| Derived calculation | Unit-safe annual rooftop harvest and conditional IRICEN monthly storage sizing when required evidence exists |
 | Assumption/default | Must be source-backed, labelled `ENGINEERING_DEFAULT` or `ASSUMED`, and returned in response provenance; none are silently inserted into inputs |
 
 ## External-data failure states
@@ -173,4 +188,7 @@ The existing request fields remain accepted. Optional latitude/longitude and adm
 
 ## Frontend impact statement
 
-The existing frontend can submit the current request and render null/unavailable values, so no form, route, styling or layout change is required for the backend transition. A minimal additive result rendering change may be made only to expose the new feasibility reasons and source provenance. No page or visual redesign is planned.
+The existing frontend keeps its routes and layout. One optional monthly-use input was
+added because the selected sizing method cannot operate without explicit demand; the
+result page additively renders the method, normal-year metrics and assumptions. No
+arbitrary default is pre-populated and no visual redesign is included.

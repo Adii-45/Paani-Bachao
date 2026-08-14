@@ -49,11 +49,19 @@ const sourceBackedResult: AssessmentResult = {
   },
   rtrwh: {
     potentialLitresPerYear: 15_000,
-    recommendedSizeLitres: null,
-    sizingMessage: "Storage capacity cannot be sized from annual harvesting potential alone.",
+    recommendedSizeLitres: 5_000,
+    sizingMessage: "Capacity uses the IRICEN monthly cumulative-surplus method.",
     calculationStatus: "DATA_AVAILABLE",
-    sizingStatus: "INSUFFICIENT_DATA_FOR_SIZING",
-    sizingMethodId: "CGWB_MANUAL_2007_STORAGE_DATA_REQUIREMENTS",
+    sizingStatus: "SIZE_AVAILABLE",
+    sizingMethodId: "IRICEN_2022_MONTHLY_CUMULATIVE_SURPLUS",
+    sizingDesignPeriod: "July-June normal year",
+    sizingRainfallResolution: "IMD district monthly normal, 1971-2020",
+    demandUsedLitresPerMonth: 2_000,
+    estimatedSupplyLitres: 20_000,
+    estimatedOverflowLitres: 1_000,
+    demandMetPercent: 83.33,
+    depletionMonths: [5, 6],
+    sizingAssumptions: ["Monthly demand is constant at the user-entered value."],
   },
   artificialRecharge: {
     potential: null,
@@ -118,6 +126,11 @@ describe("assessment results", () => {
 
     expect(screen.getByRole("heading", { name: "Rainwater & Recharge Assessment" })).toBeInTheDocument();
     expect(screen.getAllByText("15,000").length).toBeGreaterThan(0);
+    expect(screen.getByText("5,000")).toBeInTheDocument();
+    expect(screen.getByText("litres")).toBeInTheDocument();
+    expect(screen.getByText("2,000 L/month")).toBeInTheDocument();
+    expect(screen.getByText("83%")).toBeInTheDocument();
+    expect(screen.getByText(/Design period: July-June normal year/)).toBeInTheDocument();
     expect(screen.getByText(/Gross rainfall volume: 20,000 L\/year/)).toBeInTheDocument();
     expect(screen.getByText("Example District, Example State, India")).toBeInTheDocument();
     expect(screen.getByText("Reference period: CGWB worked example")).toBeInTheDocument();

@@ -5,6 +5,7 @@ export type AssessmentInput = {
   soilType: string;
   groundwaterDepthM: number;
   availableGroundAreaM2: number;
+  monthlyRainwaterDemandLitres?: number;
 };
 
 export type AssessmentResult = {
@@ -44,6 +45,26 @@ export type AssessmentResult = {
     sizingMethodId?: string;
     sizingMissingInputs?: string[];
     sizingSourceIds?: string[];
+    sizingDesignPeriod?: string;
+    sizingRainfallResolution?: string | null;
+    sizingRainfallReferencePeriod?: string | null;
+    demandUsedLitresPerMonth?: number | null;
+    estimatedSupplyLitres?: number | null;
+    estimatedOverflowLitres?: number | null;
+    demandMetPercent?: number | null;
+    depletionMonths?: number[];
+    sizingAssumptions?: string[];
+    storagePeriods?: Array<{
+      month: number;
+      rainfallMm: number;
+      inflowLitres: number;
+      demandLitres: number;
+      cumulativeSurplusLitres: number;
+      suppliedLitres: number;
+      unmetDemandLitres: number;
+      overflowLitres: number;
+      storageEndLitres: number;
+    }>;
   };
   artificialRecharge: {
     potential: string | null;

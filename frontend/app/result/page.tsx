@@ -147,11 +147,18 @@ export default function ResultPage() {
           <ResultSection title="Recommended RTRWH Size" eyebrow="Indicative storage">
             <p className="metric-label">Indicative RTRWH Size</p>
             <MetricValue amount={result.rtrwh.recommendedSizeLitres} unit="litres" />
-            {result.rtrwh.sizingMessage ? (
-              <p className="unavailable-message">{result.rtrwh.sizingMessage}</p>
-            ) : (
-              <p className="section-note">This is a preliminary storage recommendation. Household-demand optimization and rainfall distribution modelling are not included in this assessment.</p>
+            {result.rtrwh.recommendedSizeLitres != null && (
+              <dl className="supporting-values single-column">
+                <div><dt>Planned monthly use</dt><dd>{value(result.rtrwh.demandUsedLitresPerMonth ?? null, " L/month")}</dd></div>
+                <div><dt>Modeled normal-year supply</dt><dd>{value(result.rtrwh.estimatedSupplyLitres ?? null, " L/year")}</dd></div>
+                <div><dt>Modeled overflow</dt><dd>{value(result.rtrwh.estimatedOverflowLitres ?? null, " L/year")}</dd></div>
+                <div><dt>Normal-year demand met</dt><dd>{value(result.rtrwh.demandMetPercent ?? null, "%")}</dd></div>
+              </dl>
             )}
+            {result.rtrwh.sizingMessage && (
+              <p className={result.rtrwh.recommendedSizeLitres == null ? "unavailable-message" : "section-note"}>{result.rtrwh.sizingMessage}</p>
+            )}
+            {result.rtrwh.sizingRainfallResolution && <p className="section-note">Rainfall input: {result.rtrwh.sizingRainfallResolution}. Design period: {result.rtrwh.sizingDesignPeriod}.</p>}
           </ResultSection>
         </div>
 

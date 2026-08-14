@@ -60,6 +60,27 @@ describe("property assessment form", () => {
     expect(screen.getAllByRole("option", { name: "Don't know" })).toHaveLength(2);
     expect(screen.getByLabelText(/Roof Area/)).toHaveAttribute("min", "0.1");
     expect(screen.getByLabelText(/Groundwater Depth/)).toHaveAttribute("min", "0");
+    expect(screen.getByLabelText(/Planned Monthly Rainwater Use/)).not.toBeRequired();
+  });
+
+  it("sends optional planned monthly use when the user requests tank sizing", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => successfulResult,
+    }));
+    render(<AssessmentPage />);
+    fillValidForm();
+    fireEvent.change(screen.getByLabelText(/Planned Monthly Rainwater Use/), {
+      target: { value: "500" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Calculate Assessment/ }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/result"));
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(request.body as string)).toMatchObject({
+      monthlyRainwaterDemandLitres: 500,
+    });
   });
 
   it("uses native constraints to stop an invalid form before an API request", () => {

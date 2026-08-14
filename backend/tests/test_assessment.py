@@ -218,6 +218,33 @@ def test_location_to_imd_rainfall_to_rtrwh_integration() -> None:
     assert result.rtrwh.potentialLitresPerYear == 11_509.4
 
 
+def test_location_to_monthly_rainfall_demand_and_storage_integration() -> None:
+    result = create_assessment(
+        request(
+            roofMaterial="RCC",
+            roofAreaM2=20,
+            monthlyRainwaterDemandLitres=500,
+        ),
+        location_resolver=BengaluruResolver(),
+    )
+
+    assert result.rtrwh.sizingStatus == "SIZE_AVAILABLE"
+    assert result.rtrwh.recommendedSizeLitres == 5_538.8
+    assert result.rtrwh.sizingRainfallReferencePeriod == "1971-2020"
+    assert result.rtrwh.sizingRainfallResolution == (
+        "IMD district monthly normal, 1971-2020"
+    )
+    assert result.rtrwh.demandUsedLitresPerMonth == 500
+    assert result.rtrwh.estimatedSupplyLitres == 6_000
+    assert result.rtrwh.demandMetPercent == 100
+    assert len(result.rtrwh.storagePeriods) == 12
+    assert len(result.rtrwh.sizingRainfallSourceRecords) == 12
+    assert result.rtrwh.sizingMessage not in result.warnings
+    source_ids = {source.source_id for source in result.sources}
+    assert "IRICEN_RWH_2022" in source_ids
+    assert "IMD_DISTRICT_MONTHLY_NORMALS_1971_2020" in source_ids
+
+
 def test_rainfall_lookup_is_not_called_when_location_resolution_fails() -> None:
     class FailingRainfallProvider:
         def lookup(self, _location: NormalizedLocation) -> RainfallLookup:

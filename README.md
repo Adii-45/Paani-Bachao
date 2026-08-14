@@ -2,7 +2,7 @@
 
 Paani Bachao is a preliminary residential rooftop rainwater harvesting (RTRWH) and artificial recharge (AR) assessment application. Its engineering engine is evidence-first: it returns an unavailable or insufficient-data result rather than silently substituting an unsupported environmental value or design rule.
 
-> An imported IMD 1971-2020 district annual-normal rainfall record and an applicable CGWB Table 7.2 roof coefficient must both be available before annual rooftop harvest is calculated. Storage and artificial-recharge recommendations remain unavailable until their documented engineering inputs are present.
+> An imported IMD 1971-2020 district rainfall-normal record and an applicable CGWB Table 7.2 roof coefficient must both be available before annual rooftop harvest is calculated. Tank sizing additionally requires all 12 monthly normals and an explicit user-entered monthly demand. Artificial-recharge recommendations remain unavailable until their documented engineering inputs are present.
 
 ## Architecture
 
@@ -95,14 +95,25 @@ The selected IMD product, committed normalized cache, provenance fields and guar
   "roofMaterial": "RCC",
   "soilType": "SANDY_LOAM",
   "groundwaterDepthM": 8,
-  "availableGroundAreaM2": 15
+  "availableGroundAreaM2": 15,
+  "monthlyRainwaterDemandLitres": 500
 }
 ```
 
 Validation rejects empty locations, non-positive roof areas, negative groundwater/ground areas, and unsupported material or soil enums.
 
-Optional API fields support coordinate/administrative disambiguation (`latitude`, `longitude`, `state`, `district`) and groundwater observation metadata (`groundwaterObservationDate`, `groundwaterObservationSeason`, `groundwaterObservationMethod`, `groundwaterSource`) without changing the existing frontend request. The application never inserts values into these fields or presents an application-supplied value as user input.
+`monthlyRainwaterDemandLitres` is optional and is needed only for tank sizing; it is
+the user's planned constant monthly rainwater use and has no pre-populated default.
+Other optional API fields support coordinate/administrative disambiguation (`latitude`,
+`longitude`, `state`, `district`) and groundwater observation metadata
+(`groundwaterObservationDate`, `groundwaterObservationSeason`,
+`groundwaterObservationMethod`, `groundwaterSource`). The application never inserts
+values into these fields or presents an application-supplied value as user input.
 
 ## Scope
 
-This build intentionally has no authentication, profiles, demand modelling, reports, government integration, AI, payments, sensors, or other post-assessment functionality. Provider boundaries exist for future official GIS data, but no undocumented or scraped Bhuvan service is called.
+This build intentionally has no authentication, profiles, inferred household-demand
+model, reports, government integration, AI, payments, sensors, or other post-assessment
+functionality. Tank sizing uses only the explicit monthly planned-use value when the
+user supplies it. Provider boundaries exist for future official GIS data, but no
+undocumented or scraped Bhuvan service is called.

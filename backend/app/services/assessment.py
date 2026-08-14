@@ -3,14 +3,18 @@ from collections.abc import Iterable
 from ..domain.environment import LocationQuery
 from ..domain.environment import RainfallLookup
 from ..domain.location import LocationResolutionStatus
-from ..domain.units import AreaSquareMeters, RainfallMM, RunoffCoefficient
+from ..domain.units import AreaSquareMeters, RainfallMM, RunoffCoefficient, VolumeLitres
 from ..engineering.recharge import (
     assess_recharge_quantity,
     assess_structure_size,
     evaluate_feasibility,
     select_structure,
 )
-from ..engineering.rtrwh import assess_storage_size, calculate_annual_harvest
+from ..engineering.rtrwh import (
+    StorageSizingStatus,
+    assess_storage_size,
+    calculate_annual_harvest,
+)
 from ..provenance.models import DataQuality, DataStatus, ValueProvenance
 from ..provenance.registry import citations_for
 from ..providers.rainfall import NormalizedImdRainfallProvider
@@ -28,6 +32,7 @@ from ..schemas import (
     RainfallEvidence,
     RtrwhResult,
     RunoffCoefficientEvidence,
+    StoragePeriodResponse,
 )
 
 
@@ -125,7 +130,23 @@ def create_assessment(
             RunoffCoefficient(coefficient_value),
         )
 
-    storage = assess_storage_size()
+    monthly_normal = rainfall_record.monthly_normal if rainfall_record else None
+    storage = assess_storage_size(
+        monthly_rainfall_mm=(
+            monthly_normal.values_mm if usable_rainfall and monthly_normal else None
+        ),
+        roof_area=AreaSquareMeters(inputs.roofAreaM2),
+        runoff_coefficient=(
+            RunoffCoefficient(coefficient_value)
+            if coefficient_value is not None
+            else None
+        ),
+        monthly_demand=(
+            VolumeLitres(inputs.monthlyRainwaterDemandLitres)
+            if inputs.monthlyRainwaterDemandLitres is not None
+            else None
+        ),
+    )
     recharge_quantity = assess_recharge_quantity()
     groundwater_has_metadata = all(
         (
@@ -154,9 +175,10 @@ def create_assessment(
         warnings.append(rainfall_lookup.message)
     if coefficient_lookup.status is not DataStatus.DATA_AVAILABLE:
         warnings.append(coefficient_lookup.message)
+    if storage.status is not StorageSizingStatus.SIZE_AVAILABLE:
+        warnings.append(storage.message)
     warnings.extend(
         [
-            storage.message,
             recharge_quantity.message,
             "Artificial recharge feasibility is incomplete because mandatory site evidence is missing.",
             structure_sizing.message,
@@ -167,6 +189,7 @@ def create_assessment(
         [
             "CGWB_MANUAL_AR_2007",
             "BIS_IS_15797_2008",
+            *storage.source_ids,
             *feasibility.source_ids,
             *recharge_quantity.source_ids,
             *structure_selection.source_ids,
@@ -233,6 +256,37 @@ def create_assessment(
             sizingMethodId=storage.method_id,
             sizingMissingInputs=list(storage.missing_inputs),
             sizingSourceIds=list(storage.source_ids),
+            sizingDesignPeriod=storage.design_period,
+            sizingRainfallResolution=storage.rainfall_resolution,
+            sizingRainfallReferencePeriod=(
+                monthly_normal.reference_period if monthly_normal else None
+            ),
+            sizingRainfallSourceUrls=(
+                list(monthly_normal.source_urls) if monthly_normal else []
+            ),
+            sizingRainfallSourceRecords=(
+                list(monthly_normal.source_records) if monthly_normal else []
+            ),
+            demandUsedLitresPerMonth=storage.demand_used_litres_per_month,
+            estimatedSupplyLitres=storage.estimated_supply_litres,
+            estimatedOverflowLitres=storage.estimated_overflow_litres,
+            demandMetPercent=storage.demand_met_percent,
+            depletionMonths=list(storage.depletion_months),
+            sizingAssumptions=list(storage.assumptions),
+            storagePeriods=[
+                StoragePeriodResponse(
+                    month=period.month,
+                    rainfallMm=period.rainfall_mm,
+                    inflowLitres=period.inflow_litres,
+                    demandLitres=period.demand_litres,
+                    cumulativeSurplusLitres=period.cumulative_surplus_litres,
+                    suppliedLitres=period.supplied_litres,
+                    unmetDemandLitres=period.unmet_demand_litres,
+                    overflowLitres=period.overflow_litres,
+                    storageEndLitres=period.storage_end_litres,
+                )
+                for period in storage.periods
+            ],
         ),
         artificialRecharge=ArtificialRechargeResult(
             potential=None,

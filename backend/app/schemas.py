@@ -35,6 +35,7 @@ class AssessmentRequest(BaseModel):
     soilType: SoilType
     groundwaterDepthM: float = Field(ge=0, le=1_000)
     availableGroundAreaM2: float = Field(ge=0, le=100_000)
+    monthlyRainwaterDemandLitres: float | None = Field(default=None, gt=0, le=10_000_000)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     state: str | None = Field(default=None, max_length=120)
@@ -112,6 +113,30 @@ class RtrwhResult(BaseModel):
     sizingMethodId: str
     sizingMissingInputs: list[str]
     sizingSourceIds: list[str]
+    sizingDesignPeriod: str
+    sizingRainfallResolution: str | None
+    sizingRainfallReferencePeriod: str | None
+    sizingRainfallSourceUrls: list[str]
+    sizingRainfallSourceRecords: list[str]
+    demandUsedLitresPerMonth: float | None
+    estimatedSupplyLitres: float | None
+    estimatedOverflowLitres: float | None
+    demandMetPercent: float | None
+    depletionMonths: list[int]
+    sizingAssumptions: list[str]
+    storagePeriods: list["StoragePeriodResponse"]
+
+
+class StoragePeriodResponse(BaseModel):
+    month: int = Field(ge=1, le=12)
+    rainfallMm: float
+    inflowLitres: float
+    demandLitres: float
+    cumulativeSurplusLitres: float
+    suppliedLitres: float
+    unmetDemandLitres: float
+    overflowLitres: float
+    storageEndLitres: float
 
 
 class StructureRecommendation(BaseModel):

@@ -82,6 +82,8 @@ def test_assessment_endpoint_returns_evidence_aware_contract(
         ("soilType", "PEAT"),
         ("latitude", 91),
         ("longitude", -181),
+        ("monthlyRainwaterDemandLitres", 0),
+        ("monthlyRainwaterDemandLitres", -1),
     ],
 )
 def test_invalid_field_values_return_validation_errors(
@@ -125,6 +127,23 @@ def test_malformed_json_returns_clean_validation_response() -> None:
 
     assert response.status_code == 422
     assert response.headers["content-type"].startswith("application/json")
+
+
+def test_assessment_endpoint_sizes_storage_when_monthly_demand_is_supplied(
+    valid_payload: dict[str, object]
+) -> None:
+    valid_payload["roofAreaM2"] = 20
+    valid_payload["monthlyRainwaterDemandLitres"] = 500
+
+    response = post(valid_payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["rtrwh"]["sizingStatus"] == "SIZE_AVAILABLE"
+    assert body["rtrwh"]["recommendedSizeLitres"] == 5_538.8
+    assert body["rtrwh"]["sizingRainfallReferencePeriod"] == "1971-2020"
+    assert body["rtrwh"]["demandUsedLitresPerMonth"] == 500
+    assert len(body["rtrwh"]["storagePeriods"]) == 12
 
 
 def test_location_resolution_failure_returns_typed_unavailable_result(

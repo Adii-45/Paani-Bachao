@@ -78,6 +78,17 @@
       "notes": "Documents current observed/daily rainfall products. These endpoints are not used as annual-normal data."
     },
     {
+      "source_id": "IMD_DISTRICT_MONTHLY_NORMALS_1971_2020",
+      "authority": "India Meteorological Department (IMD)",
+      "document_title": "All India Districtwise Rainfall Normals (1971-2020) — Monthly",
+      "document_version_or_year": "1971-2020 monthly rainfall normals",
+      "section": "January through December district rainfall-normal maps and feature layers",
+      "page": null,
+      "source_url": "https://www.imdpune.gov.in/climinfo/normals/jan/index.html",
+      "accessed_at": "2026-08-13",
+      "notes": "Official twelve-month district-polygon normals. Each imported record preserves the URL and feature identifier for every month. Used for monthly storage sizing; annual rainfall is not divided by twelve."
+    },
+    {
       "source_id": "IMD_UPDATED_RAINFALL_NORMAL_2022",
       "authority": "India Meteorological Department (IMD)",
       "document_title": "Updated Rainfall Normal based on data of 1971-2020",
@@ -109,6 +120,17 @@
       "source_url": "https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/pow_new/Pow/download_pow_pdf_dept_commtt/72/92/",
       "accessed_at": "2026-08-13",
       "notes": "Status verified through the BIS WRD 3 Programme of Work. Detailed clauses are not encoded until the standard text is lawfully available to the project."
+    },
+    {
+      "source_id": "IRICEN_RWH_2022",
+      "authority": "Indian Railways Institute of Civil Engineering (IRICEN)",
+      "document_title": "Rain Water Harvesting",
+      "document_version_or_year": "November 2022",
+      "section": "2.2.8 and 2.2.8.1 — Storage tank and matching capacity with roof area",
+      "page": "40–42",
+      "source_url": "https://iricen.gov.in/iricen/books_jquery/rain_water_harvesting.pdf",
+      "accessed_at": "2026-08-13",
+      "notes": "Primary government engineering source for the implemented monthly cumulative harvested-water versus monthly-demand storage method and July-to-June worked table. The application uses current CGWB coefficients rather than copying the example's coefficient."
     },
     {
       "source_id": "BIS_IS_15792_2008",

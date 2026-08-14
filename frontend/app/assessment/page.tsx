@@ -50,6 +50,7 @@ export default function AssessmentPage() {
     setSubmitting(true);
     setError("");
     const form = new FormData(event.currentTarget);
+    const monthlyDemand = String(form.get("monthlyRainwaterDemandLitres") ?? "").trim();
     const payload = {
       location: form.get("location"),
       roofAreaM2: Number(form.get("roofAreaM2")),
@@ -57,6 +58,7 @@ export default function AssessmentPage() {
       soilType: form.get("soilType"),
       groundwaterDepthM: Number(form.get("groundwaterDepthM")),
       availableGroundAreaM2: Number(form.get("availableGroundAreaM2")),
+      monthlyRainwaterDemandLitres: monthlyDemand ? Number(monthlyDemand) : undefined,
     };
 
     try {
@@ -111,6 +113,9 @@ export default function AssessmentPage() {
                   <option value="" disabled>Select roof material</option><option value="RCC">RCC / Concrete</option><option value="TILES">Tiles</option><option value="METAL">GI sheet (galvanized iron)</option><option value="OTHER">Other</option><option value="DONT_KNOW">Don&apos;t know</option>
                 </select>
               </FormField>
+              <FormField id="monthlyRainwaterDemandLitres" label="Planned Monthly Rainwater Use" helper="Optional. Enter how many litres you plan to draw from the tank each month; required for tank sizing." className="field-wide">
+                <div className="control-with-unit"><input id="monthlyRainwaterDemandLitres" name="monthlyRainwaterDemandLitres" type="number" min="0.1" max="10000000" step="0.1" defaultValue={savedInputs?.monthlyRainwaterDemandLitres ?? ""} placeholder="Enter planned rainwater use per month" aria-describedby="monthlyRainwaterDemandLitres-help" /><span>litres/month</span></div>
+              </FormField>
             </div>
           </div>
 
@@ -149,7 +154,7 @@ export default function AssessmentPage() {
           <ul>
             <li>Use the horizontal catchment area of your roof.</li>
             <li>User estimates are identified as user-provided and are not presented as measured data.</li>
-            <li>No household demand or consumption data is required.</li>
+            <li>Monthly planned rainwater use is optional, but a tank size cannot be calculated without it.</li>
           </ul>
           <InfoNotice title="Data use">
             <p>Your entries are used only to calculate the current assessment and are retained in this browser session.</p>

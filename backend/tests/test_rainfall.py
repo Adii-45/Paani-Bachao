@@ -91,6 +91,24 @@ def test_checked_in_imd_cache_resolves_bengaluru_coordinate() -> None:
     assert result.record.district == "BANGLORE URBAN"
     assert result.record.rainfall_mm == 822.1
     assert result.record.reference_period == "1971-2020"
+    assert result.record.monthly_normal is not None
+    assert result.record.monthly_normal.values_mm == (
+        1.2,
+        5.2,
+        12.5,
+        41.7,
+        101.8,
+        74.9,
+        86.4,
+        116.9,
+        174.3,
+        144.4,
+        52.2,
+        10.5,
+    )
+    assert result.record.monthly_normal.source_id == (
+        "IMD_DISTRICT_MONTHLY_NORMALS_1971_2020"
+    )
 
 
 def test_missing_dataset_never_falls_back_to_demo_values(tmp_path: Path) -> None:

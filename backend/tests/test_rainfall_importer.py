@@ -5,7 +5,9 @@ from pathlib import Path
 
 from app.importers.imd_rainfall import (
     IMD_LAYER_URL,
+    IMD_MONTHLY_SOURCE_ID,
     IMD_SOURCE_ID,
+    MONTH_CODES,
     IMDDistrictRainfallImporter,
 )
 
@@ -49,6 +51,43 @@ def test_imd_importer_preserves_source_and_spatial_metadata(tmp_path: Path) -> N
     assert record["spatial_resolution"] == "IMD district polygon"
     assert record["bounding_box"] == [77.0, 12.0, 78.0, 13.0]
     assert record["geometry"]["type"] == "Polygon"
+
+
+def test_imd_importer_preserves_all_monthly_normals_and_provenance() -> None:
+    importer = IMDDistrictRainfallImporter()
+    monthly_sources = {
+        month: SOURCE_FIXTURE.replace("123.4", str(index + 1))
+        for index, month in enumerate(MONTH_CODES)
+    }
+
+    normalized = importer.normalize(
+        SOURCE_FIXTURE,
+        imported_at=datetime(2026, 8, 13, tzinfo=UTC),
+        monthly_source_texts=monthly_sources,
+    )
+    monthly = normalized["records"][0]["monthly_normal"]
+
+    assert monthly["values_mm"] == list(range(1, 13))
+    assert monthly["reference_period"] == "1971-2020"
+    assert monthly["source_id"] == IMD_MONTHLY_SOURCE_ID
+    assert len(monthly["source_urls"]) == 12
+    assert len(monthly["source_records"]) == 12
+    assert normalized["monthly_source_sha256"].keys() == set(MONTH_CODES)
+
+
+def test_imd_importer_requires_all_twelve_monthly_layers() -> None:
+    importer = IMDDistrictRainfallImporter()
+
+    try:
+        importer.normalize(
+            SOURCE_FIXTURE,
+            imported_at=datetime(2026, 8, 13, tzinfo=UTC),
+            monthly_source_texts={"jan": SOURCE_FIXTURE},
+        )
+    except ValueError as exc:
+        assert "Exactly twelve" in str(exc)
+    else:
+        raise AssertionError("Importer accepted an incomplete monthly dataset")
 
 
 def test_importer_rejects_missing_authoritative_fields() -> None:
