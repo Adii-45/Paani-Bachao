@@ -100,7 +100,7 @@ export default function AssessmentPage() {
               <div><h2>Property and rooftop details</h2><p>Information used to estimate available rooftop runoff.</p></div>
             </header>
             <div className="form-grid">
-              <FormField id="location" label="Location / Locality" helper="Used to find a matching record in the installed official rainfall dataset." className="field-wide">
+              <FormField id="location" label="Location / Locality" helper="Resolved to coordinates, then matched against the installed official rainfall dataset." className="field-wide">
                 <input id="location" name="location" type="text" required maxLength={120} defaultValue={savedInputs?.location ?? ""} placeholder="Enter city, district or locality" aria-describedby="location-help" />
               </FormField>
               <FormField id="roofAreaM2" label="Roof Area" helper="Enter the approximate rooftop catchment area.">

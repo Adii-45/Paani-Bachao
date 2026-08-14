@@ -1,6 +1,8 @@
 from collections.abc import Iterable
 
 from ..domain.environment import LocationQuery
+from ..domain.environment import RainfallLookup
+from ..domain.location import LocationResolutionStatus
 from ..domain.units import AreaSquareMeters, RainfallMM, RunoffCoefficient
 from ..engineering.recharge import (
     assess_recharge_quantity,
@@ -12,6 +14,8 @@ from ..engineering.rtrwh import assess_storage_size, calculate_annual_harvest
 from ..provenance.models import DataQuality, DataStatus, ValueProvenance
 from ..provenance.registry import citations_for
 from ..providers.rainfall import NormalizedImdRainfallProvider
+from ..providers.location import LocationResolver, NominatimLocationResolver
+from ..providers.rainfall.base import RainfallProvider
 from ..providers.runoff import SourceBackedRunoffCoefficientProvider
 from ..schemas import (
     ArtificialRechargeResult,
@@ -20,6 +24,7 @@ from ..schemas import (
     DerivedData,
     FeasibilityCriterionResponse,
     FormulaDetails,
+    NormalizedLocationEvidence,
     RainfallEvidence,
     RtrwhResult,
     RunoffCoefficientEvidence,
@@ -30,15 +35,39 @@ def _unique(values: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
 
-def create_assessment(inputs: AssessmentRequest) -> AssessmentResponse:
-    location = LocationQuery(
+def create_assessment(
+    inputs: AssessmentRequest,
+    *,
+    location_resolver: LocationResolver | None = None,
+    rainfall_provider: RainfallProvider | None = None,
+) -> AssessmentResponse:
+    location_query = LocationQuery(
         location=inputs.location,
         latitude=inputs.latitude,
         longitude=inputs.longitude,
         state=inputs.state,
         district=inputs.district,
     )
-    rainfall_lookup = NormalizedImdRainfallProvider().lookup(location)
+    location_resolution = (location_resolver or NominatimLocationResolver()).resolve(
+        location_query
+    )
+    normalized_location = location_resolution.location
+    if (
+        location_resolution.status is LocationResolutionStatus.RESOLVED
+        and normalized_location is not None
+    ):
+        rainfall_lookup = (rainfall_provider or NormalizedImdRainfallProvider()).lookup(
+            normalized_location
+        )
+    else:
+        rainfall_lookup = RainfallLookup(
+            status=DataStatus.DATA_UNAVAILABLE,
+            error_code="LOCATION_NOT_RESOLVED",
+            message=(
+                "RainfallDataUnavailable: rainfall lookup was not attempted because "
+                f"the location was not resolved. {location_resolution.message}"
+            ),
+        )
     coefficient_lookup = SourceBackedRunoffCoefficientProvider().lookup(
         inputs.roofMaterial.value
     )
@@ -70,8 +99,11 @@ def create_assessment(inputs: AssessmentRequest) -> AssessmentResponse:
         spatialResolution=rainfall_record.spatial_resolution if rainfall_record else None,
         sourceRecord=rainfall_record.source_record if rainfall_record else None,
         datasetVersion=rainfall_record.dataset_version if rainfall_record else None,
+        sourceName=rainfall_record.source_name if rainfall_record else None,
+        sourceUrl=rainfall_record.source_url if rainfall_record else None,
         provenance=rainfall_provenance,
         message=rainfall_lookup.message,
+        errorCode=rainfall_lookup.error_code,
     )
     coefficient_evidence = RunoffCoefficientEvidence(
         status=coefficient_lookup.status,
@@ -139,6 +171,12 @@ def create_assessment(inputs: AssessmentRequest) -> AssessmentResponse:
             *recharge_quantity.source_ids,
             *structure_selection.source_ids,
             *structure_sizing.source_ids,
+            *(
+                ["OPENSTREETMAP_NOMINATIM"]
+                if normalized_location
+                and normalized_location.provider == "OpenStreetMap Nominatim"
+                else []
+            ),
             *(rainfall_record.source_id for _ in [0] if rainfall_record),
             *(coefficient_record.source_ids if coefficient_record else []),
         ]
@@ -151,9 +189,28 @@ def create_assessment(inputs: AssessmentRequest) -> AssessmentResponse:
     return AssessmentResponse(
         inputs=inputs,
         derived=DerivedData(
+            locationStatus=location_resolution.status,
+            normalizedLocation=(
+                NormalizedLocationEvidence(
+                    input=normalized_location.input,
+                    canonicalName=normalized_location.canonical_name,
+                    latitude=normalized_location.latitude,
+                    longitude=normalized_location.longitude,
+                    district=normalized_location.district,
+                    state=normalized_location.state,
+                    country=normalized_location.country,
+                    provider=normalized_location.provider,
+                    providerPlaceId=normalized_location.provider_place_id,
+                    confidence=normalized_location.confidence,
+                    candidateCount=normalized_location.candidate_count,
+                    message=location_resolution.message,
+                )
+                if normalized_location
+                else None
+            ),
             annualRainfallMm=rainfall_value,
             rainfallSource=(
-                f"IMD official dataset: {rainfall_record.dataset_version}"
+                f"{rainfall_record.source_name}: {rainfall_record.dataset_version}"
                 if rainfall_record
                 else None
             ),

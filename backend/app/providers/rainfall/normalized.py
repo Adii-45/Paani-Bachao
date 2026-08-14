@@ -1,37 +1,38 @@
-import json
 from pathlib import Path
 
-from ...domain.environment import LocationQuery, RainfallLookup, RainfallRecord
+from ...domain.environment import RainfallLookup
+from ...domain.location import NormalizedLocation
 from ...provenance.models import DataStatus
 from ...provenance.registry import source_registry
+from ...repositories.rainfall import NormalizedRainfallRepository
 
 DEFAULT_DATASET_PATH = (
     Path(__file__).resolve().parents[2]
     / "data"
     / "normalized"
-    / "imd_normal_annual_rainfall.json"
+    / "imd_normal_annual_rainfall.json.gz"
 )
-
-
-def normalize_location(value: str | None) -> str | None:
-    if value is None:
-        return None
-    return " ".join(value.casefold().replace(",", " ").split())
 
 
 class NormalizedImdRainfallProvider:
     """Reads a versioned local cache imported from an official IMD dataset.
 
-    It deliberately performs exact administrative/name matching. It does not infer a
-    nearest station or interpolate a grid without source-defined geometry and method.
+    It uses the resolved coordinate and the official district polygons. It does not
+    infer a nearest station or interpolate outside the published source geometry.
     """
 
     def __init__(self, dataset_path: Path = DEFAULT_DATASET_PATH) -> None:
-        self.dataset_path = dataset_path
+        self.repository = NormalizedRainfallRepository(dataset_path)
 
-    def lookup(self, location: LocationQuery) -> RainfallLookup:
-        with self.dataset_path.open(encoding="utf-8") as source:
-            dataset = json.load(source)
+    def lookup(self, location: NormalizedLocation) -> RainfallLookup:
+        try:
+            dataset = self.repository.load()
+        except (FileNotFoundError, OSError, ValueError):
+            return RainfallLookup(
+                status=DataStatus.DATA_UNAVAILABLE,
+                error_code="RAINFALL_DATA_UNAVAILABLE",
+                message="RainfallDataUnavailable: the normalized IMD cache cannot be loaded.",
+            )
 
         dataset_status = dataset.get("dataset_status")
         if dataset_status == "STALE":
@@ -43,40 +44,36 @@ class NormalizedImdRainfallProvider:
                     "An official IMD long-period annual rainfall dataset has not been "
                     "ingested for this installation."
                 ),
+                error_code="RAINFALL_DATA_UNAVAILABLE",
             )
         else:
             result_status = DataStatus.DATA_AVAILABLE
 
-        requested_name = normalize_location(location.location)
-        requested_state = normalize_location(location.state)
-        requested_district = normalize_location(location.district)
-        matches: list[RainfallRecord] = []
-        for item in dataset.get("records", []):
-            record = RainfallRecord.model_validate(item)
-            if record.statistic_type != "LONG_PERIOD_NORMAL_ANNUAL":
-                continue
-            names = {
-                normalize_location(record.location_name),
-                normalize_location(record.district),
-                record.record_id.casefold(),
-            }
-            if requested_name not in names:
-                continue
-            if requested_state and requested_state != normalize_location(record.state):
-                continue
-            if requested_district and requested_district != normalize_location(record.district):
-                continue
-            matches.append(record)
+        records = [
+            record
+            for record in self.repository.records(dataset)
+            if record.statistic_type == "LONG_PERIOD_NORMAL_ANNUAL"
+        ]
+        matches = self.repository.find_at_coordinates(
+            records,
+            latitude=location.latitude,
+            longitude=location.longitude,
+        )
 
         if not matches:
             return RainfallLookup(
                 status=DataStatus.UNSUPPORTED_LOCATION,
-                message="No matching official annual-normal rainfall record is available.",
+                error_code="RAINFALL_DATA_UNAVAILABLE",
+                message=(
+                    "RainfallDataUnavailable: the resolved coordinate is not covered by "
+                    "an imported IMD district-normal polygon."
+                ),
             )
         if len(matches) > 1:
             return RainfallLookup(
                 status=DataStatus.INSUFFICIENT_DATA,
-                message="The location is ambiguous; provide state and district identifiers.",
+                error_code="RAINFALL_LOCATION_AMBIGUOUS",
+                message="More than one IMD district polygon contains this coordinate.",
             )
 
         record = matches[0]

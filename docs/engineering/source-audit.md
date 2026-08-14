@@ -52,7 +52,7 @@ This audit is the evidence gate for replacing the demo assessment engine. `KEEP`
 | Dynamic groundwater resource estimation | CGWB | GEC-2015 methodology | Assessment-unit groundwater-resource estimation | Context/provider metadata only; not household structure sizing | High |
 | Aquifer/geology/quality | CGWB | NAQUIM/NAQUIM 2.0 aquifer maps and management plans | Aquifer geometry/properties, water levels, resource availability and quality at stated mapping resolution | Periodic official import/provider, retaining report/feature identifiers and resolution | High, but coverage/granularity varies |
 | Groundwater prospects/thematic GIS | NRSC/ISRO | Bhuvan/Bhuvan Bhujal thematic services | Geomorphology, lithology and groundwater-prospect information where published/authorized | Documented OGC/download provider only; no scraping; unsupported where access is restricted | Medium pending layer-by-layer service verification |
-| Normal rainfall | IMD | Official long-period normal rainfall data obtained through IMD data services/supply channels | Normal rainfall with reference period and station/grid/district resolution | Versioned ingestion into normalized local records; no current-daily substitute | High when an official dataset is supplied; currently unavailable in repository |
+| Normal rainfall | IMD | *All India Districtwise Rainfall Normals (1971-2020) — Annual* and IMD's 14 April 2022 updated-normal release | Annual district normal based on the 50-year 1971-2020 period | Official polygon layer imported into a versioned compressed cache; coordinate-in-polygon lookup; no current-daily substitute | High for source/provenance; district spatial resolution limits property precision |
 | Current observed rainfall | IMD | IMD public district/station rainfall APIs | Current/daily/cumulative observed products | Not used as a substitute for long-period annual normal; possible future separate provider | High, not applicable to current annual-potential method |
 | Material-specific roof coefficients | CGWB | *Manual on Artificial Recharge of Ground Water* (2007), Table 7.2, document page 118 | GI sheet 0.90, asbestos 0.80, tiled 0.75, concrete 0.70 | Source-backed records; enable only matching UI categories and expose the published condition | High |
 | Structure-specific sizing | CGWB; BIS IS 15792:2008 | Structure-specific guidance plus site investigation | Required inputs and valid application ranges differ by structure | Implement separately per structure only after clauses and required site data are available | Low/currently unresolved for automated residential sizing |
@@ -65,7 +65,8 @@ This audit is the evidence gate for replacing the demo assessment engine. `KEEP`
 - CGWB, Ground Water Resource Assessment / GEC methodology: https://cgwb.gov.in/en/ground-water-resource-assessment-0
 - CGWB, Aquifer Mapping / NAQUIM: https://cgwb.gov.in/en/aquifer-mapping
 - IMD public API reference: https://api.imd.gov.in/public/api_reference.html
-- IMD rainfall information: https://mausam.imd.gov.in/responsive/rainfallinformation_swd.php?msg=M
+- IMD district annual normals product: https://www.imdpune.gov.in/climinfo/season/ann/index.html
+- IMD updated 1971-2020 rainfall-normal release: https://internal.imd.gov.in/press_release/20220414_pr_1572.pdf
 - BIS WRD 3 Programme of Work: https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/pow_new/Pow/download_pow_pdf_dept_commtt/72/92/
 - NRSC/ISRO Bhuvan WMS guidance: https://bhuvan.nrsc.gov.in/wiki/index.php/How_to_use_WMS_services
 - NRSC/ISRO Bhuvan water-sector information: https://bhuvan.nrsc.gov.in/wiki/index.php/Water_Sector

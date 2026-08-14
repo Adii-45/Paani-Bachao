@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .domain.environment import RainfallErrorCode
+from .domain.location import LocationResolutionStatus
 from .provenance.models import DataStatus, PublishedRange, SourceCitation, ValueProvenance
 
 
@@ -51,6 +53,8 @@ class AssessmentRequest(BaseModel):
 
 
 class DerivedData(BaseModel):
+    locationStatus: LocationResolutionStatus
+    normalizedLocation: "NormalizedLocationEvidence | None"
     annualRainfallMm: float | None
     rainfallSource: str | None
     runoffCoefficient: float | None
@@ -58,6 +62,21 @@ class DerivedData(BaseModel):
     rainfall: "RainfallEvidence"
     runoffCoefficientStatus: DataStatus
     runoffCoefficientEvidence: "RunoffCoefficientEvidence"
+
+
+class NormalizedLocationEvidence(BaseModel):
+    input: str
+    canonicalName: str
+    latitude: float
+    longitude: float
+    district: str | None
+    state: str | None
+    country: str
+    provider: str
+    providerPlaceId: str | None
+    confidence: str
+    candidateCount: int | None
+    message: str
 
 
 class RainfallEvidence(BaseModel):
@@ -69,8 +88,11 @@ class RainfallEvidence(BaseModel):
     spatialResolution: str | None = None
     sourceRecord: str | None = None
     datasetVersion: str | None = None
+    sourceName: str | None = None
+    sourceUrl: str | None = None
     provenance: ValueProvenance | None = None
     message: str
+    errorCode: RainfallErrorCode | None = None
 
 
 class RunoffCoefficientEvidence(BaseModel):

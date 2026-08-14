@@ -56,15 +56,15 @@
       "notes": "Official source family for aquifer geometry, properties, groundwater behaviour, availability and quality. Individual imported features must identify their report and resolution."
     },
     {
-      "source_id": "IMD_NORMAL_RAINFALL_DATASET",
+      "source_id": "IMD_DISTRICT_ANNUAL_NORMALS_1971_2020",
       "authority": "India Meteorological Department (IMD)",
-      "document_title": "Official long-period normal rainfall dataset",
-      "document_version_or_year": "Not yet ingested",
-      "section": null,
+      "document_title": "All India Districtwise Rainfall Normals (1971-2020) Annual",
+      "document_version_or_year": "1971-2020 rainfall normal; published for use from southwest monsoon 2022",
+      "section": "Annual district rainfall-normal map and Rainfallinmm_1.js feature layer",
       "page": null,
-      "source_url": "https://mausam.imd.gov.in/responsive/rainfallinformation_swd.php?msg=M",
+      "source_url": "https://www.imdpune.gov.in/climinfo/season/ann/index.html",
       "accessed_at": "2026-08-13",
-      "notes": "Registry placeholder for an officially obtained annual-normal dataset. Every imported record must supply its actual dataset title, version/reference period and source record. Current daily rainfall is not a substitute."
+      "notes": "Official district-polygon annual rainfall normals. IMD's 14 April 2022 release states the normal is based on 50 years (1971-2020), replaces 1961-2010, and is updated once per decade. Used only for annual harvesting potential, not design-storm or tank reliability sizing."
     },
     {
       "source_id": "IMD_PUBLIC_API_REFERENCE",
@@ -76,6 +76,28 @@
       "source_url": "https://api.imd.gov.in/public/api_reference.html",
       "accessed_at": "2026-08-13",
       "notes": "Documents current observed/daily rainfall products. These endpoints are not used as annual-normal data."
+    },
+    {
+      "source_id": "IMD_UPDATED_RAINFALL_NORMAL_2022",
+      "authority": "India Meteorological Department (IMD)",
+      "document_title": "Updated Rainfall Normal based on data of 1971-2020",
+      "document_version_or_year": "14 April 2022",
+      "section": "Product methodology and reference period",
+      "page": "1-2",
+      "source_url": "https://internal.imd.gov.in/press_release/20220414_pr_1572.pdf",
+      "accessed_at": "2026-08-13",
+      "notes": "Documents the 50-year 1971-2020 normal, its once-per-decade update cycle, and replacement of the 1961-2010 normal."
+    },
+    {
+      "source_id": "OPENSTREETMAP_NOMINATIM",
+      "authority": "OpenStreetMap contributors / Nominatim project",
+      "document_title": "Nominatim Search API",
+      "document_version_or_year": "Documentation current at access date",
+      "section": "Free-form search, address details and countrycodes filter",
+      "page": null,
+      "source_url": "https://nominatim.org/release-docs/latest/api/Search/",
+      "accessed_at": "2026-08-13",
+      "notes": "Non-engineering, replaceable geocoding provider. It resolves user text to coordinates; it is not the rainfall authority. Provider ranking and candidate count are exposed rather than converted into an application confidence score."
     },
     {
       "source_id": "BIS_IS_15797_2008",

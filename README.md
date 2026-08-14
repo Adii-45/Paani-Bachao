@@ -2,7 +2,7 @@
 
 Paani Bachao is a preliminary residential rooftop rainwater harvesting (RTRWH) and artificial recharge (AR) assessment application. Its engineering engine is evidence-first: it returns an unavailable or insufficient-data result rather than silently substituting an unsupported environmental value or design rule.
 
-> An official IMD long-period annual-normal rainfall record and an applicable CGWB Table 7.2 roof coefficient must both be available before annual rooftop harvest is calculated. Storage and artificial-recharge recommendations remain unavailable until their documented engineering inputs are present.
+> An imported IMD 1971-2020 district annual-normal rainfall record and an applicable CGWB Table 7.2 roof coefficient must both be available before annual rooftop harvest is calculated. Storage and artificial-recharge recommendations remain unavailable until their documented engineering inputs are present.
 
 ## Architecture
 
@@ -42,7 +42,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The default repository contains no fabricated rainfall fallback, so rainfall-dependent results remain unavailable until a verified official dataset is ingested.
+Open `http://localhost:3000`. Text locations are resolved to coordinates through a replaceable geocoder, then matched locally against the committed IMD district-normal polygons. Rainfall lookup does not call a weather service and has no fabricated fallback.
 
 ## Developer checks
 
@@ -82,7 +82,7 @@ CI runs automatically on pushes and pull requests to `main`. Separate frontend a
 
 The source matrix and removed-assumption audit are in [`docs/engineering/source-audit.md`](docs/engineering/source-audit.md). The calculation/data model is documented in [`docs/engineering/proposed-model.md`](docs/engineering/proposed-model.md).
 
-Official IMD rainfall deliveries can be normalized with the guarded ingestion script described in [`docs/engineering/rainfall-ingestion.md`](docs/engineering/rainfall-ingestion.md). The script requires the operator to supply the exact dataset title/version and confirm that the input came from an official source.
+The selected IMD product, committed normalized cache, provenance fields and guarded refresh command are documented in [`docs/engineering/rainfall-ingestion.md`](docs/engineering/rainfall-ingestion.md).
 
 ## API
 

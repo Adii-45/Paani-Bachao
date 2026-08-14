@@ -94,6 +94,12 @@ export default function ResultPage() {
         <ResultSection title="Property Summary" eyebrow="Information provided">
           <dl className="property-summary-grid">
             <div><dt>Location / Locality</dt><dd>{input.location}</dd></div>
+            {result.derived.normalizedLocation && (
+              <div>
+                <dt>Resolved Rainfall Location</dt>
+                <dd>{result.derived.normalizedLocation.canonicalName}</dd>
+              </div>
+            )}
             <div><dt>Roof Area</dt><dd>{input.roofAreaM2} m²</dd></div>
             <div><dt>Roof Material</dt><dd>{displayLabel(input.roofMaterial)}</dd></div>
             <div><dt>Soil Type</dt><dd>{displayLabel(input.soilType)}</dd></div>
@@ -119,6 +125,15 @@ export default function ResultPage() {
                   <span>{input.roofAreaM2} m²</span><b>×</b><span>{value(result.derived.annualRainfallMm, " mm")}</span><b>×</b><span>{result.derived.runoffCoefficient ?? "Unavailable"}</span><b>=</b><strong>{value(result.rtrwh.potentialLitresPerYear, " L/year")}</strong>
                 </div>
                 <small>Rainfall source: {result.derived.rainfallSource ?? "Not configured"}</small>
+                {result.derived.rainfall?.referencePeriod && (
+                  <small>Reference period: {result.derived.rainfall.referencePeriod}</small>
+                )}
+                {result.derived.rainfall?.spatialResolution && (
+                  <small>Resolution: {result.derived.rainfall.spatialResolution}</small>
+                )}
+                {result.derived.rainfall?.sourceUrl && (
+                  <small><a href={result.derived.rainfall.sourceUrl} target="_blank" rel="noreferrer">View rainfall source</a></small>
+                )}
                 {result.derived.rainfall?.message && <p>{result.derived.rainfall.message}</p>}
                 {result.derived.runoffCoefficientEvidence?.message && <p>{result.derived.runoffCoefficientEvidence.message}</p>}
                 {result.formula.grossRainfallVolumeLitres != null && (

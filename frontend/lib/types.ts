@@ -10,11 +10,28 @@ export type AssessmentInput = {
 export type AssessmentResult = {
   inputs: AssessmentInput;
   derived: {
+    locationStatus?: string;
+    normalizedLocation?: {
+      canonicalName: string;
+      latitude: number;
+      longitude: number;
+      district: string | null;
+      state: string | null;
+      provider: string;
+      confidence: string;
+    } | null;
     annualRainfallMm: number | null;
     rainfallSource: string | null;
     runoffCoefficient: number | null;
     rainfallStatus?: string;
-    rainfall?: { message: string; referencePeriod: string | null; spatialResolution: string | null };
+    rainfall?: {
+      message: string;
+      referencePeriod: string | null;
+      spatialResolution: string | null;
+      sourceName?: string | null;
+      sourceUrl?: string | null;
+      errorCode?: string | null;
+    };
     runoffCoefficientStatus?: string;
     runoffCoefficientEvidence?: { message: string };
   };

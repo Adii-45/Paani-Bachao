@@ -8,7 +8,10 @@ This document defines the implementation boundary after the source audit. It del
 user location / optional coordinates
         |
         v
-versioned IMD-normal rainfall provider ----> DATA_UNAVAILABLE when no official record exists
+replaceable location resolver -> canonical location + latitude/longitude
+        |
+        v
+versioned IMD district-normal provider ----> DATA_UNAVAILABLE when no official record exists
         |
 roof area + source-backed roof coefficient
         |
@@ -66,7 +69,7 @@ No result is calculated when rainfall or a supported coefficient is absent.
 
 ## Rainfall
 
-The current five-city values are removed from the primary engine. The replacement is a provider over normalized, versioned IMD records. A record must carry:
+The current five-city values are removed from the primary engine. The replacement is a provider over IMD's **All India Districtwise Rainfall Normals (1971-2020) — Annual** map. The committed normalized cache contains the 696 district features published in the accessed official layer. A record carries:
 
 - `rainfall_mm`;
 - `statistic_type` (for this method, a long-period/normal annual statistic);
@@ -76,7 +79,13 @@ The current five-city values are removed from the primary engine. The replacemen
 - retrieval/import timestamp;
 - data-quality category.
 
-The IMD public API's current observed/daily rainfall is not silently treated as a long-period annual normal. Until an appropriate official dataset is imported, the provider returns `DATA_UNAVAILABLE` or `UNSUPPORTED_LOCATION`. The ingestion boundary accepts officially obtained tabular data and never manufactures missing records.
+The IMD public API's current observed/daily rainfall is not silently treated as a long-period annual normal. The importer preserves the published district geometry, source feature ID, source URL, 1971-2020 reference period, import timestamp and source-file digest. Assessment-time lookup uses resolved coordinates against that local geometry, with no rainfall network call and no manufactured fallback.
+
+## Location resolution
+
+`LocationResolver` isolates the assessment service from geocoder-specific HTTP code. The current text implementation uses the Nominatim search API with an India country filter and retains the provider's highest-ranked result, candidate count, place ID, importance metadata, coordinates and administrative fields. It does not convert those values into an invented numeric confidence score. API callers may provide coordinates directly; those are clearly marked `USER_PROVIDED_COORDINATES` and are not presented as geocoded facts.
+
+If resolution fails, the service returns `NOT_RESOLVED` or `PROVIDER_UNAVAILABLE`, does not call rainfall lookup, and does not calculate RTRWH potential. Nominatim is a replaceable non-engineering location service; IMD remains the rainfall authority.
 
 ## Runoff coefficients
 
@@ -141,9 +150,9 @@ Each future structure will have an independent sizing strategy with its own requ
 | Category | Current implementation policy |
 | --- | --- |
 | User input | Roof area, descriptive roof material/soil, undated groundwater-depth estimate and open area; retained as `USER_PROVIDED` and never relabelled as measured |
-| Live external data | None required for deterministic assessment; provider interfaces isolate future services |
-| Official periodically imported data | IMD normal rainfall and future CGWB/NAQUIM/NRSC layers, normalized and versioned |
-| Cached data | Only previously ingested official records with original version/date and retrieval timestamp |
+| Live external data | Nominatim text geocoding when the request does not already contain coordinates; no environmental value comes from it |
+| Official periodically imported data | IMD 1971-2020 annual district normals and future CGWB/NAQUIM/NRSC layers, normalized and versioned |
+| Cached data | 696 imported IMD district polygons/normal values with original feature ID, period, URL, digest and retrieval timestamp |
 | Source-backed configuration | Source registry and future coefficient/decision records with clause/page provenance |
 | Derived calculation | Unit-safe rainfall volume and rooftop harvest when required evidence exists |
 | Assumption/default | Must be source-backed, labelled `ENGINEERING_DEFAULT` or `ASSUMED`, and returned in response provenance; none are silently inserted into inputs |

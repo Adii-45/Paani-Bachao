@@ -1,4 +1,6 @@
 from datetime import datetime
+from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,6 +13,12 @@ class LocationQuery(BaseModel):
     longitude: float | None = None
     state: str | None = None
     district: str | None = None
+
+
+class RainfallErrorCode(str, Enum):
+    RAINFALL_DATA_UNAVAILABLE = "RAINFALL_DATA_UNAVAILABLE"
+    RAINFALL_LOCATION_AMBIGUOUS = "RAINFALL_LOCATION_AMBIGUOUS"
+    LOCATION_NOT_RESOLVED = "LOCATION_NOT_RESOLVED"
 
 
 class RainfallRecord(BaseModel):
@@ -27,15 +35,22 @@ class RainfallRecord(BaseModel):
     reference_period: str = Field(alias="referencePeriod")
     spatial_resolution: str = Field(alias="spatialResolution")
     source_id: str = Field(alias="sourceId")
+    source_name: str = Field(alias="sourceName")
+    source_url: str = Field(alias="sourceUrl")
     source_record: str = Field(alias="sourceRecord")
     dataset_version: str = Field(alias="datasetVersion")
     retrieved_at: datetime = Field(alias="retrievedAt")
+    bounding_box: tuple[float, float, float, float] | None = Field(
+        default=None, alias="boundingBox"
+    )
+    geometry: dict[str, Any] | None = None
 
 
 class RainfallLookup(BaseModel):
     status: DataStatus
     record: RainfallRecord | None = None
     message: str
+    error_code: RainfallErrorCode | None = None
 
 
 class RunoffCoefficientRecord(BaseModel):

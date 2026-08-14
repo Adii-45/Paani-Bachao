@@ -10,4 +10,8 @@ def valid_payload() -> dict[str, object]:
         "soilType": "SANDY_LOAM",
         "groundwaterDepthM": 8,
         "availableGroundAreaM2": 15,
+        "latitude": 12.9716,
+        "longitude": 77.5946,
+        "state": "Karnataka",
+        "district": "Bengaluru Urban",
     }

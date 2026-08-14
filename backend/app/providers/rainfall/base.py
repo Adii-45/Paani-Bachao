@@ -1,7 +1,8 @@
 from typing import Protocol
 
-from ...domain.environment import LocationQuery, RainfallLookup
+from ...domain.environment import RainfallLookup
+from ...domain.location import NormalizedLocation
 
 
 class RainfallProvider(Protocol):
-    def lookup(self, location: LocationQuery) -> RainfallLookup: ...
+    def lookup(self, location: NormalizedLocation) -> RainfallLookup: ...

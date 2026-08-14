@@ -3,6 +3,7 @@ import asyncio
 import httpx
 import pytest
 
+from app.domain.location import LocationResolution, LocationResolutionStatus
 from app.main import app
 
 
@@ -47,9 +48,13 @@ def test_assessment_endpoint_returns_evidence_aware_contract(
     assert response.status_code == 200
     body = response.json()
     assert body["inputs"]["location"] == valid_payload["location"]
-    assert body["derived"]["rainfallStatus"] == "DATA_UNAVAILABLE"
-    assert body["derived"]["rainfall"]["value"] is None
-    assert body["rtrwh"]["calculationStatus"] == "INSUFFICIENT_DATA"
+    assert body["derived"]["locationStatus"] == "RESOLVED"
+    assert body["derived"]["normalizedLocation"]["latitude"] == 12.9716
+    assert body["derived"]["rainfallStatus"] == "DATA_AVAILABLE"
+    assert body["derived"]["rainfall"]["value"] == 822.1
+    assert body["derived"]["rainfall"]["referencePeriod"] == "1971-2020"
+    assert body["rtrwh"]["calculationStatus"] == "DATA_AVAILABLE"
+    assert body["rtrwh"]["potentialLitresPerYear"] == 69_056.4
     assert body["rtrwh"]["sizingStatus"] == "INSUFFICIENT_DATA_FOR_SIZING"
     assert body["artificialRecharge"]["feasibilityStatus"] == "INSUFFICIENT_DATA"
     assert body["artificialRecharge"]["structureSelectionStatus"] == (
@@ -120,6 +125,29 @@ def test_malformed_json_returns_clean_validation_response() -> None:
 
     assert response.status_code == 422
     assert response.headers["content-type"].startswith("application/json")
+
+
+def test_location_resolution_failure_returns_typed_unavailable_result(
+    valid_payload: dict[str, object], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    valid_payload.pop("latitude")
+    valid_payload.pop("longitude")
+    monkeypatch.setattr(
+        "app.services.assessment.NominatimLocationResolver.resolve",
+        lambda _self, _query: LocationResolution(
+            status=LocationResolutionStatus.NOT_RESOLVED,
+            message="LocationNotResolved: fixture.",
+        ),
+    )
+
+    response = post(valid_payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["derived"]["locationStatus"] == "NOT_RESOLVED"
+    assert body["derived"]["normalizedLocation"] is None
+    assert body["derived"]["rainfall"]["errorCode"] == "LOCATION_NOT_RESOLVED"
+    assert body["rtrwh"]["potentialLitresPerYear"] is None
 
 
 def test_internal_service_failure_does_not_expose_stack_trace(

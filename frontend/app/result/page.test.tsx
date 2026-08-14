@@ -23,6 +23,16 @@ const sourceBackedResult: AssessmentResult = {
     availableGroundAreaM2: 15,
   },
   derived: {
+    locationStatus: "RESOLVED",
+    normalizedLocation: {
+      canonicalName: "Example District, Example State, India",
+      latitude: 12.5,
+      longitude: 77.5,
+      district: "Example District",
+      state: "Example State",
+      provider: "test fixture",
+      confidence: "fixture",
+    },
     annualRainfallMm: 1000,
     rainfallSource: "CGWB published worked example",
     runoffCoefficient: 0.75,
@@ -31,6 +41,8 @@ const sourceBackedResult: AssessmentResult = {
       message: "Published worked example.",
       referencePeriod: "CGWB worked example",
       spatialResolution: "worked example",
+      sourceName: "Central Ground Water Board (CGWB)",
+      sourceUrl: "https://cgwb.gov.in/example-rainfall.pdf",
     },
     runoffCoefficientStatus: "DATA_AVAILABLE",
     runoffCoefficientEvidence: { message: "Published worked-example coefficient." },
@@ -107,6 +119,13 @@ describe("assessment results", () => {
     expect(screen.getByRole("heading", { name: "Rainwater & Recharge Assessment" })).toBeInTheDocument();
     expect(screen.getAllByText("15,000").length).toBeGreaterThan(0);
     expect(screen.getByText(/Gross rainfall volume: 20,000 L\/year/)).toBeInTheDocument();
+    expect(screen.getByText("Example District, Example State, India")).toBeInTheDocument();
+    expect(screen.getByText("Reference period: CGWB worked example")).toBeInTheDocument();
+    expect(screen.getByText("Resolution: worked example")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View rainfall source" })).toHaveAttribute(
+      "href",
+      "https://cgwb.gov.in/example-rainfall.pdf",
+    );
     expect(screen.getAllByText("Insufficient data").length).toBeGreaterThan(0);
     expect(screen.getByText(/No applicable CGWB\/NAQUIM feature/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Manual on Artificial Recharge/ })).toHaveAttribute(
