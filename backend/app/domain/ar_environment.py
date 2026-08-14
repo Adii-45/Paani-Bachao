@@ -21,6 +21,14 @@ class InfiltrationDataType(str, Enum):
     REGIONAL_SOIL_PROXY = "REGIONAL_SOIL_PROXY"
 
 
+class HydrogeologyFeatureType(str, Enum):
+    GEOLOGY = "GEOLOGY"
+    GEOMORPHOLOGY = "GEOMORPHOLOGY"
+    AQUIFER = "AQUIFER"
+    GROUNDWATER_PROSPECT = "GROUNDWATER_PROSPECT"
+    COMBINED = "COMBINED"
+
+
 class GroundwaterObservation(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -87,6 +95,10 @@ class HydrogeologyInformation(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     record_id: str = Field(alias="recordId")
+    feature_type: HydrogeologyFeatureType = Field(
+        default=HydrogeologyFeatureType.COMBINED, alias="featureType"
+    )
+    source_feature_id: str | None = Field(default=None, alias="sourceFeatureId")
     geology: str | None = None
     lithology: str | None = None
     geomorphology: str | None = None
@@ -94,8 +106,14 @@ class HydrogeologyInformation(BaseModel):
     aquifer_type: str | None = Field(default=None, alias="aquiferType")
     aquifer_depth: str | None = Field(default=None, alias="aquiferDepth")
     aquifer_thickness: str | None = Field(default=None, alias="aquiferThickness")
+    aquifer_characteristics: dict[str, str] = Field(
+        default_factory=dict, alias="aquiferCharacteristics"
+    )
     spatial_resolution: EnvironmentalResolution = Field(alias="spatialResolution")
     dataset_version: str = Field(alias="datasetVersion")
+    dataset_name: str | None = Field(default=None, alias="datasetName")
+    source_layer: str | None = Field(default=None, alias="sourceLayer")
+    source_organization: str | None = Field(default=None, alias="sourceOrganization")
     provenance: ValueProvenance
     bounding_box: tuple[float, float, float, float] | None = Field(
         default=None, alias="boundingBox"
@@ -106,6 +124,7 @@ class HydrogeologyInformation(BaseModel):
 class HydrogeologyLookup(BaseModel):
     status: DataStatus
     information: HydrogeologyInformation | None = None
+    features: list[HydrogeologyInformation] = Field(default_factory=list)
     geology_status: DataStatus = Field(alias="geologyStatus")
     geomorphology_status: DataStatus = Field(alias="geomorphologyStatus")
     aquifer_status: DataStatus = Field(alias="aquiferStatus")

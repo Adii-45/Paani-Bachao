@@ -229,7 +229,7 @@
       "page": null,
       "source_url": "https://gis.nwic.in/server/rest/services/NWIC/AquiferSystems_GSI/FeatureServer/layers",
       "accessed_at": "2026-08-13",
-      "notes": "Official polygon service advertises aquifer/lithology-related fields. No value is used until a reviewed feature intersecting the property coordinate is imported."
+      "notes": "Official polygon service exposes separate Principal Aquifers and Major Aquifers layers. Published fields include source object ID, aquifer labels and separately named aquifer-characteristic fields. Import mapping must preserve those meanings; no value is used until a reviewed feature intersecting the property coordinate is imported."
     }
   ]
 }

@@ -89,7 +89,50 @@ Verified official service families include:
 - NRSC Bhuvan documented OGC thematic services;
 - CGWB NAQUIM reports.
 
-Service metadata is not a site attribute. Because no reviewed intersecting feature export could be imported reliably, the committed hydrogeology cache has zero records. Geology, geomorphology, groundwater prospects and aquifer status each return an explicit unavailable status; no value is inferred from the user's soil label or groundwater observation.
+The NWIC/GSI service documents separate polygon layers for Principal Aquifers and
+Major Aquifers. Its published schema distinguishes source object IDs, aquifer labels,
+aquifer systems and other separately named source characteristics. The importer does
+not relabel those values as geology, geomorphology or numeric recharge properties.
+
+`scripts/ingest_hydrogeology.py` normalizes one reviewed WGS 84 polygon layer at a
+time. A feature type and explicit source-field mapping are required. Mappings are
+semantically constrained: geology/lithology fields cannot be mapped into an aquifer
+layer, and aquifer fields cannot be mapped into a geomorphology layer. The current
+approved `NWIC_GSI_AQUIFER_SYSTEMS` source supports `AQUIFER` and documented
+lithology/geology context only; it is not treated as a geomorphology or groundwater-
+prospect dataset.
+
+Separate normalized layer outputs can be combined into one cache. Runtime lookup:
+
+- preserves every intersecting source feature in `features`;
+- composes independent non-conflicting geology and aquifer attributes for the legacy
+  `information` field;
+- reports a component as `INSUFFICIENT_DATA` if multiple intersecting features claim
+  the same semantic component;
+- leaves missing fields null and never derives a recharge score.
+
+Example reviewed aquifer-layer import:
+
+```bash
+cd backend
+.venv/bin/python -m scripts.ingest_hydrogeology reviewed-aquifer.geojson \
+  --source-id NWIC_GSI_AQUIFER_SYSTEMS \
+  --feature-type AQUIFER \
+  --dataset-version "reviewed official version" \
+  --source-layer "Principal Aquifers (1)" \
+  --spatial-resolution "published layer scale/resolution" \
+  --record-id-field objectid \
+  --aquifer-type-field aquifer \
+  --aquifer-characteristic aquifer_system=system \
+  --confirm-official-source
+```
+
+Service metadata is not a site attribute. The official endpoint did not return a
+reviewable feature export during this implementation run, so the committed production
+cache still has zero records. Geology, geomorphology, groundwater prospects and
+aquifer status remain explicitly unavailable at runtime until reviewed source polygons
+are imported. No value is inferred from the user's soil label or groundwater
+observation.
 
 ## Cache validation
 
