@@ -19,8 +19,10 @@ class NormalizedLocation(BaseModel):
     canonical_name: str = Field(alias="canonicalName")
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
+    locality: str | None = None
     district: str | None = None
     state: str | None = None
+    postal_code: str | None = Field(default=None, alias="postalCode")
     country: str
     provider: str
     provider_place_id: str | None = Field(default=None, alias="providerPlaceId")

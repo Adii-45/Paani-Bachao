@@ -31,6 +31,8 @@ from app.provenance.models import (
     PublishedRange,
     ValueProvenance,
 )
+from app.providers.location.cache import InMemoryLocationResolutionCache
+from app.providers.location.geocoding import NominatimLocationResolver
 from app.schemas import AssessmentRequest
 from app.services.assessment import create_assessment
 
@@ -416,6 +418,85 @@ def test_location_to_imd_rainfall_to_rtrwh_integration() -> None:
     assert result.derived.runoffCoefficient == 0.7
     assert result.formula.grossRainfallVolumeLitres == 16_442
     assert result.rtrwh.potentialLitresPerYear == 11_509.4
+
+
+def test_realistic_location_string_resolves_into_environmental_pipeline() -> None:
+    def geocoder_results(*_args: object) -> list[dict[str, object]]:
+        return [
+            {
+                "place_id": 987,
+                "display_name": (
+                    "Indiranagar, Bengaluru, Bengaluru Urban, Karnataka, India"
+                ),
+                "lat": "12.9784",
+                "lon": "77.6408",
+                "importance": 0.61,
+                "address": {
+                    "suburb": "Indiranagar",
+                    "city": "Bengaluru",
+                    "state_district": "Bengaluru Urban",
+                    "state": "Karnataka",
+                    "postcode": "560038",
+                    "country": "India",
+                    "country_code": "in",
+                },
+            }
+        ]
+
+    resolver = NominatimLocationResolver(
+        transport=geocoder_results,
+        cache=InMemoryLocationResolutionCache(),
+    )
+    result = create_assessment(
+        request(location="Indiranagar, Bengaluru", roofMaterial="RCC", roofAreaM2=20),
+        location_resolver=resolver,
+    )
+
+    assert result.derived.locationStatus is LocationResolutionStatus.RESOLVED
+    assert result.derived.normalizedLocation is not None
+    assert result.derived.normalizedLocation.locality == "Indiranagar"
+    assert result.derived.normalizedLocation.postalCode == "560038"
+    assert result.derived.normalizedLocation.latitude == 12.9784
+    assert result.derived.normalizedLocation.longitude == 77.6408
+    assert result.derived.annualRainfallMm == 822.1
+    assert result.artificialRecharge.environmentalProfile is not None
+    assert result.artificialRecharge.environmentalProfile.location.latitude == 12.9784
+
+
+def test_location_outside_original_city_set_resolves_into_rainfall_provider() -> None:
+    def mysuru_geocoder(*_args: object) -> list[dict[str, object]]:
+        return [
+            {
+                "place_id": 654,
+                "display_name": "Mysuru, Mysore District, Karnataka, India",
+                "lat": "12.2958",
+                "lon": "76.6394",
+                "importance": 0.59,
+                "address": {
+                    "city": "Mysuru",
+                    "state_district": "Mysore",
+                    "state": "Karnataka",
+                    "postcode": "570001",
+                    "country": "India",
+                    "country_code": "in",
+                },
+            }
+        ]
+
+    result = create_assessment(
+        request(location="Mysuru", roofMaterial="RCC", roofAreaM2=20),
+        location_resolver=NominatimLocationResolver(
+            transport=mysuru_geocoder,
+            cache=InMemoryLocationResolutionCache(),
+        ),
+    )
+
+    assert result.derived.locationStatus is LocationResolutionStatus.RESOLVED
+    assert result.derived.normalizedLocation is not None
+    assert result.derived.normalizedLocation.canonicalName.startswith("Mysuru")
+    assert result.derived.normalizedLocation.postalCode == "570001"
+    assert result.derived.annualRainfallMm == 760.4
+    assert result.derived.rainfall.referencePeriod == "1971-2020"
 
 
 def test_location_to_monthly_rainfall_demand_and_storage_integration() -> None:

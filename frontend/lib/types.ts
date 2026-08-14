@@ -19,8 +19,10 @@ export type AssessmentResult = {
       canonicalName: string;
       latitude: number;
       longitude: number;
+      locality?: string | null;
       district: string | null;
       state: string | null;
+      postalCode?: string | null;
       provider: string;
       confidence: string;
     } | null;

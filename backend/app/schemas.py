@@ -92,8 +92,10 @@ class NormalizedLocationEvidence(BaseModel):
     canonicalName: str
     latitude: float
     longitude: float
+    locality: str | None
     district: str | None
     state: str | None
+    postalCode: str | None
     country: str
     provider: str
     providerPlaceId: str | None
