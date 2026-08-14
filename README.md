@@ -1,39 +1,122 @@
 # Paani Bachao
 
-Paani Bachao is a preliminary residential rooftop rainwater harvesting (RTRWH) and artificial recharge (AR) assessment application. Its engineering engine is evidence-first: it returns an unavailable or insufficient-data result rather than silently substituting an unsupported environmental value or design rule.
+Paani Bachao is a web application for preliminary Roof Top Rain Water Harvesting
+(RTRWH) and Artificial Recharge (AR) assessment. It combines real location
+resolution, source-backed environmental evidence, deterministic engineering
+calculations, and a homeowner-friendly result page.
 
-> An imported IMD 1971-2020 district rainfall-normal record and an applicable CGWB Table 7.2 roof coefficient must both be available before annual rooftop harvest is calculated. Tank sizing additionally requires all 12 monthly normals and an explicit user-entered monthly demand. Artificial-recharge recommendations remain unavailable until their documented engineering inputs are present.
+The current MVP supports rainfall-based RTRWH assessment across the installed IMD
+dataset. Complete AR recommendations are intentionally limited to reviewed regional
+coverage; the application reports missing evidence instead of inventing a result.
 
-## Architecture
+## Live Demo
 
-- `frontend/` — Next.js 16 + TypeScript user interface
-- `backend/` — FastAPI API, normalized domain types, provider interfaces, source-backed engineering methods, and tests
-- `backend/app/data/sources.json` — machine-readable engineering source registry
-- `backend/app/data/normalized/` — versioned official datasets imported into the normalized provider format
-- `backend/app/data/source_backed/` — engineering records that include source and selection provenance
-- `docs/engineering/` — source audit, proposed model, limitations, and ingestion instructions
+- **Frontend (Vercel):** `COMING_SOON_VERCEL_URL`
+- **Backend API (Render):** `COMING_SOON_RENDER_URL`
 
-Environmental providers are independent of engineering calculations and API/UI code. The core engine receives normalized values with provenance, source version, spatial/temporal resolution, and data-quality metadata.
+Replace these placeholders after deployment.
 
-## Run locally
+## What It Does
 
-Requirements: Node.js 20+, npm, Python 3.11+.
+```text
+Location
+  → rainfall and environmental lookup
+  → annual RTRWH potential
+  → monthly demand-based tank sizing
+  → recharge-available tank overflow
+  → AR feasibility
+  → regional structure selection
+  → structure-specific indicative sizing
+  → homeowner-friendly result
+```
+
+The normal result view emphasizes the final recommendation. Environmental evidence,
+calculation details, engineering statuses, and source provenance remain available in
+expandable sections for technical review.
+
+## Current Supported AR Coverage
+
+Full end-to-end AR assessment is currently validated for:
+
+- **Hauz Khas, Delhi**
+- **Jayanagar, Bengaluru**
+
+Other locations may still receive location resolution, IMD rainfall data, and RTRWH
+calculations. Detailed AR assessment additionally requires reviewed groundwater,
+soil/infiltration, hydrogeological evidence, and an applicable regional structure
+methodology. An unavailable AR result outside the reviewed areas is an intentional
+safety outcome, not a fabricated fallback.
+
+See [AR regional coverage](docs/ar-regional-coverage.md) for the exact evidence,
+methodologies, and field-verification requirements.
+
+## Key Features
+
+- Real Indian location resolution through OpenStreetMap Nominatim
+- IMD 1971–2020 annual and monthly district rainfall normals
+- Source-backed annual rooftop harvest calculation
+- Monthly rainfall and user-demand-based tank sizing
+- Finite-tank monthly storage, supply, and overflow simulation
+- Recharge-available overflow calculation without arbitrary recharge fractions
+- Source-backed, condition-based AR feasibility
+- Regionally constrained AR structure selection
+- Structure-specific indicative sizing using applicable CGWB/KSCST guidance
+- Conservative handling of stale or missing environmental evidence
+- Explicit infiltration, groundwater, water-quality, and field-verification warnings
+- Compact homeowner result page with expandable technical evidence and sources
+- Automated backend and frontend tests, CI, and pre-commit checks
+
+## Tech Stack
+
+| Area | Technologies |
+| --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript |
+| Backend | FastAPI, Python, Pydantic |
+| Data and engineering | IMD rainfall normals; CGWB environmental and hydrogeological evidence; CGWB/KSCST regional structure methodologies; IRICEN storage method |
+| Testing and quality | Pytest, Vitest, Testing Library, ESLint, TypeScript type checking, pre-commit, environmental cache validation |
+| Deployment | Vercel (frontend), Render (backend API) |
+
+## Project Structure
+
+```text
+Paani-Bachao/
+├── frontend/                       # Next.js application
+├── backend/
+│   ├── app/                        # API, providers, domain and engineering logic
+│   ├── scripts/                    # Dataset ingestion and cache validation
+│   └── tests/                      # Backend unit, API and integration tests
+├── docs/
+│   ├── ar-regional-coverage.md
+│   └── engineering/                # Methods, data sources and limitations
+├── .github/workflows/ci.yml
+└── .pre-commit-config.yaml
+```
+
+Environmental provider code is separated from engineering calculations. Runtime
+lookups consume normalized records with source, time, spatial resolution, and
+data-quality metadata.
+
+## Local Development
+
+Requirements: Node.js 20+, npm, and Python 3.11+.
 
 ### Backend
 
 ```bash
 cd backend
-uv venv .venv
+python -m venv .venv
 source .venv/bin/activate
-uv pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-The API is available at `http://localhost:8000`, with interactive documentation at `http://localhost:8000/docs`.
+The API runs at `http://localhost:8000`; interactive FastAPI documentation is at
+`http://localhost:8000/docs`.
 
 ### Frontend
 
-In a second terminal:
+In another terminal:
 
 ```bash
 cd frontend
@@ -42,95 +125,116 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Text locations are resolved to coordinates through a replaceable geocoder, then matched locally against the committed IMD district-normal polygons. Rainfall lookup does not call a weather service and has no fabricated fallback.
+Open `http://localhost:3000`.
 
-## Developer checks
+### Pre-commit hook
 
-After installing the backend and frontend dependencies, install the pre-commit development tool into the backend virtual environment and activate the Git hook once per clone:
+From the repository root, after creating the backend environment:
 
 ```bash
-uv pip install --python backend/.venv/bin/python -r requirements-dev.txt
+backend/.venv/bin/python -m pip install -r requirements-dev.txt
 backend/.venv/bin/pre-commit install
 ```
 
-The committed `.pre-commit-config.yaml` runs fast file validation, Python syntax checks, and ESLint on staged frontend files before each commit. Run every hook manually with:
+Run every hook manually with:
 
 ```bash
 backend/.venv/bin/pre-commit run --all-files
 ```
 
-Pre-commit is an early local check; GitHub Actions remains the source of full lint, type-check, test, and production-build verification.
+## Environment Variables
 
-## Tests
+The frontend reads one public environment variable:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+It is documented in [`frontend/.env.example`](frontend/.env.example). In Vercel,
+set `NEXT_PUBLIC_API_URL` to the deployed Render backend URL. Do not place secrets in
+this variable because `NEXT_PUBLIC_*` values are exposed to the browser.
+
+No backend environment variable is currently required for local assessment.
+
+## Deployment
+
+### Backend — Render
+
+1. Create a Render web service for this repository and configure `backend` as its
+   working/root directory.
+2. Install dependencies from `requirements.txt`.
+3. Start the FastAPI application with `uvicorn app.main:app`, binding it to Render's
+   assigned host and port according to Render's service configuration.
+4. Deploy, verify the API and `/docs`, and copy the final Render URL.
+5. Set that URL as `NEXT_PUBLIC_API_URL` in the Vercel project.
+
+No Render-specific configuration file is currently committed, so confirm the final
+service commands in Render before deployment.
+
+### Frontend — Vercel
+
+1. Import the repository into Vercel.
+2. Select `frontend` as the project root directory.
+3. Set `NEXT_PUBLIC_API_URL` to the HTTPS Render backend URL.
+4. Deploy and replace `COMING_SOON_VERCEL_URL` above with the final URL.
+
+After the backend deploys, replace `COMING_SOON_RENDER_URL` as well.
+
+## Testing
+
+Run the backend suite and environmental cache validation:
 
 ```bash
 cd backend
-.venv/bin/python -m pytest
+.venv/bin/python -m pytest -q
+.venv/bin/python scripts/validate_environmental_cache.py --all
+```
 
-cd ../frontend
+Run the complete frontend verification:
+
+```bash
+cd frontend
+npm test
 npm run lint
 npm run typecheck
-npm test
 npm run build
 ```
 
-## Continuous integration
+Run repository-wide pre-commit checks from the repository root:
 
-CI runs automatically on pushes and pull requests to `main`. Separate frontend and backend jobs check linting, types, tests, application imports, and the production build using the repository's existing npm and Python dependency files.
-
-## Engineering data and provenance
-
-Artificial recharge is currently validated end-to-end only for Hauz Khas, Delhi,
-and Jayanagar, Bengaluru. See [regional AR coverage](docs/ar-regional-coverage.md)
-for data sources, required field verification, and unsupported-location behavior.
-
-The source matrix and removed-assumption audit are in [`docs/engineering/source-audit.md`](docs/engineering/source-audit.md). The calculation/data model is documented in [`docs/engineering/proposed-model.md`](docs/engineering/proposed-model.md).
-
-The selected IMD product, committed normalized cache, provenance fields and guarded refresh command are documented in [`docs/engineering/rainfall-ingestion.md`](docs/engineering/rainfall-ingestion.md).
-
-## API
-
-`POST /api/assessment`
-
-```json
-{
-  "location": "Jayanagar, Bengaluru",
-  "roofAreaM2": 120,
-  "roofMaterial": "RCC",
-  "availableGroundAreaM2": 15,
-  "monthlyRainwaterDemandLitres": 500,
-  "storageCapacityLitres": 5000,
-  "buildingHasBasement": false
-}
+```bash
+backend/.venv/bin/pre-commit run --all-files
 ```
 
-Validation rejects empty locations, non-positive roof areas, negative groundwater/ground areas, and unsupported material or soil enums.
+GitHub Actions repeats the supported frontend and backend checks for pushes and pull
+requests to `main`.
 
-`monthlyRainwaterDemandLitres` is optional and is needed only for tank sizing; it is
-the user's planned constant monthly rainwater use and has no pre-populated default.
-Other optional API fields support coordinate/administrative disambiguation (`latitude`,
-`longitude`, `state`, `district`) and groundwater observation metadata
-(`groundwaterObservationDate`, `groundwaterObservationSeason`,
-`groundwaterObservationMethod`, `groundwaterSource`). The application never inserts
-values into these fields or presents an application-supplied value as user input.
+## Data Sources and Methodology
 
-Environmental evidence for artificial recharge is resolved independently after
-location normalization. The intentionally limited production caches support the
-Hauz Khas and Jayanagar vertical slices with stale nearby CGWB observations and
-regional mapped evidence. They do not represent property measurements; infiltration,
-current groundwater, water quality and final well termination remain field checks. See
-`docs/engineering/environmental-data.md` for sources, cache refresh and limitations.
+- **Rainfall:** IMD All India Districtwise Rainfall Normals, 1971–2020, imported into
+  a normalized local coordinate-searchable cache.
+- **Annual RTRWH volume and runoff coefficients:** CGWB guidance.
+- **Storage sizing:** IRICEN monthly cumulative-surplus method using monthly rainfall
+  normals and explicit planned monthly demand.
+- **Groundwater and hydrogeology:** reviewed CGWB observations and regional evidence.
+- **AR selection and sizing:** applicable, spatially restricted CGWB Delhi and
+  CGWB/KSCST Bengaluru methodologies.
 
-The assessment response also contains an additive `environmentalData` summary with
-independent statuses for rainfall, groundwater, soil and hydrogeology. A provider can
-be available, stale, unsupported or unavailable without another provider supplying a
-fallback. `EnvironmentalDataService` owns this orchestration; API routes and
-engineering calculations do not read environmental cache files directly.
+Detailed engineering documentation:
 
-## Scope
+- [Calculation and data model](docs/engineering/proposed-model.md)
+- [Rainfall ingestion](docs/engineering/rainfall-ingestion.md)
+- [Environmental data](docs/engineering/environmental-data.md)
+- [Artificial recharge methods](docs/engineering/artificial-recharge-phase1.md)
+- [Source audit](docs/engineering/source-audit.md)
 
-This build intentionally has no authentication, profiles, inferred household-demand
-model, reports, government integration, AI, payments, sensors, or other post-assessment
-functionality. Tank sizing uses only the explicit monthly planned-use value when the
-user supplies it. Provider boundaries exist for future official GIS data, but no
-undocumented or scraped Bhuvan service is called.
+## Current Limitations
+
+- Complete AR support is limited to the two reviewed regional vertical slices above.
+- Groundwater evidence may be a nearby, stale observation and requires current field
+  confirmation.
+- Regional soil evidence is not a property infiltration measurement; an on-site
+  infiltration/percolation test may be required.
+- Recharge water quality may require testing before construction.
+- Final recharge-well termination and aquifer intake depth require field investigation.
+- All structure sizing is preliminary and indicative; it is not construction approval.
