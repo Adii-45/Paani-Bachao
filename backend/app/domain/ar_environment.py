@@ -59,6 +59,11 @@ class SoilInformation(BaseModel):
     soil_class: str | None = Field(default=None, alias="soilClass")
     soil_texture: str | None = Field(default=None, alias="soilTexture")
     permeability_class: str | None = Field(default=None, alias="permeabilityClass")
+    source_category: str | None = Field(default=None, alias="sourceCategory")
+    source_code: str | None = Field(default=None, alias="sourceCode")
+    dataset_name: str | None = Field(default=None, alias="datasetName")
+    dataset_version: str | None = Field(default=None, alias="datasetVersion")
+    source_organization: str | None = Field(default=None, alias="sourceOrganization")
     measured_infiltration_rate_mm_per_hr: float | None = Field(
         default=None, ge=0, alias="measuredInfiltrationRateMmPerHr"
     )

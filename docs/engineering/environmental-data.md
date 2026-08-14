@@ -41,9 +41,44 @@ separate operator step.
 
 ## Soil and infiltration
 
-NWIC publishes the `Soil_1New` ArcGIS service at `https://gis.nwic.in/server/rest/services/SubInfoSysLCC/Soil_1New/MapServer`. During implementation the service metadata was available, but its sublayer schemas/features were not reliably retrievable. The committed cache therefore has zero records and returns `FIELD_MEASUREMENT_REQUIRED`.
+NWIC publishes the `Soil_1New` ArcGIS service at
+`https://gis.nwic.in/server/rest/services/SubInfoSysLCC/Soil_1New/MapServer`.
+The service advertises map/query capability and GeoJSON support, but its soil
+sublayer schema/features were not reliably retrievable during implementation. The
+committed production cache therefore still has zero records and returns
+`DATA_UNAVAILABLE`; it does not contain synthetic polygons.
 
-A regional soil class is not converted into hydraulic conductivity or an infiltration rate. A property-level field infiltration/percolation test is still required before design. The homeowner's descriptive soil selection is retained for compatibility but is not engineering evidence.
+`scripts/ingest_nwic_soil.py` normalizes a separately acquired and reviewed official
+WGS 84 GeoJSON polygon export. The operator must explicitly provide the source-field
+mapping, dataset version, source layer and published spatial resolution. The importer
+rejects malformed polygons, invalid coordinates, duplicate source identifiers and
+unregistered provenance. Runtime lookup includes polygon boundaries; if overlapping
+polygons both contain a coordinate, the result is `INSUFFICIENT_DATA` rather than an
+arbitrary selection.
+
+Example import from a reviewed local export:
+
+```bash
+cd backend
+.venv/bin/python -m scripts.ingest_nwic_soil reviewed-soil.geojson \
+  --dataset-version "reviewed official version" \
+  --source-layer "published layer name" \
+  --spatial-resolution "published map scale or resolution" \
+  --record-id-field "reviewed source ID field" \
+  --soil-class-field "reviewed soil class field" \
+  --confirm-official-source
+```
+
+The command performs no network call. It does not establish that an input file is
+official merely because the confirmation flag was supplied; source acquisition,
+licensing and attribute mapping require operator review.
+
+A regional soil class is never converted into hydraulic conductivity or an
+infiltration rate. `measuredInfiltrationRateMmPerHr` remains null and
+`fieldTestRecommended` remains true for every imported regional polygon. A
+property-level field infiltration/percolation test is still required before design.
+The homeowner's descriptive soil selection is retained for compatibility but is not
+engineering evidence.
 
 ## Geology, geomorphology and aquifer context
 
