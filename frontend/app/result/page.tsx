@@ -9,26 +9,57 @@ import type { AssessmentResult } from "@/lib/types";
 import { SERVER_SNAPSHOT, useSessionValue } from "@/lib/session";
 
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
-const value = (amount: number | null, suffix = "") => amount === null ? "Unavailable" : `${number.format(amount)}${suffix}`;
+const value = (amount: number | null, suffix = "") =>
+  amount === null ? "Unavailable" : `${number.format(amount)}${suffix}`;
+
+function homeownerArStatus(status: string, hasStructure: boolean) {
+  if (status === "ELIGIBLE" || status === "SUITABLE") return "Suitable";
+  if (status === "CONDITIONALLY_ELIGIBLE" || status === "CONDITIONALLY_SUITABLE") return "Conditional";
+  if (status === "UNSUITABLE" || status === "NOT_RECOMMENDED") return "Unsuitable";
+  return hasStructure ? "Conditional" : "Not assessable";
+}
+
+function homeownerRtrwhStatus(status: string, potential: number | null) {
+  if (status === "SUITABLE") return "Suitable";
+  return potential !== null ? "Assessment available" : "Not assessable";
+}
 
 function Dimensions({ dimensions }: { dimensions: Record<string, unknown> | null }) {
-  if (!dimensions) return <>Unavailable</>;
+  if (!dimensions) return null;
+
   const groups = [
     { label: "Trench", keys: ["trenchLengthM", "trenchWidthM", "trenchDepthM"] },
     { label: "Surface chamber", keys: ["chamberLengthM", "chamberWidthM", "chamberDepthM"] },
   ];
-  const group = groups.find(({ keys }) => keys.every((key) => key in dimensions));
-  if (group) return <>{group.label}: {group.keys.map((key) => `${dimensions[key]} m`).join(" × ")}</>;
-  const options = Array.isArray(dimensions.wellOptions) ? dimensions.wellOptions as Array<{diameterM: number; minimumDesignDepthM: number}> : [];
-  if (options.length) return <>{options.map((option) => `${option.diameterM} m diameter × ${option.minimumDesignDepthM} m published minimum geometric depth`).join("; ")}</>;
-  return <>Partial dimensions available in the engineering details</>;
+  const group = groups.find(({ keys }) => keys.every((key) => typeof dimensions[key] === "number"));
+  const options = Array.isArray(dimensions.wellOptions)
+    ? dimensions.wellOptions as Array<{ diameterM: number; publishedCalculatedDepthM?: number; minimumDesignDepthM: number }>
+    : [];
+
+  return (
+    <div className="dimension-list">
+      {group && (
+        <div>
+          <span>{group.label}</span>
+          <strong>{group.keys.map((key) => `${dimensions[key]} m`).join(" × ")}</strong>
+        </div>
+      )}
+      {options.map((option) => (
+        <div key={`${option.diameterM}-${option.minimumDesignDepthM}`}>
+          <span>Recharge well</span>
+          <strong>{option.diameterM} m diameter × {option.minimumDesignDepthM} m published minimum depth</strong>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function MetricValue({ amount, unit }: { amount: number | null; unit: string }) {
+function ResultMetric({ label, amount, unit }: { label: string; amount: number | null; unit: string }) {
   return (
-    <div className={`official-metric ${amount === null ? "metric-unavailable" : ""}`}>
+    <div className={`result-metric ${amount === null ? "metric-unavailable" : ""}`}>
+      <span>{label}</span>
       <strong>{value(amount)}</strong>
-      {amount !== null && <span>{unit}</span>}
+      {amount !== null && <small>{unit}</small>}
     </div>
   );
 }
@@ -65,12 +96,16 @@ export default function ResultPage() {
   }
 
   const input = result.inputs;
-  const arMessage = result.artificialRecharge.message;
-  const rechargeStatus = result.artificialRecharge.feasibilityStatus;
-  const environmental = result.artificialRecharge.environmentalProfile;
-  const waterQualityCriterion = result.artificialRecharge.criteria.find(
+  const ar = result.artificialRecharge;
+  const environmental = ar.environmentalProfile;
+  const hasStructure = Boolean(ar.recommendedStructure);
+  const arStatus = homeownerArStatus(ar.feasibilityStatus, hasStructure);
+  const rtrwhStatus = homeownerRtrwhStatus(result.rtrwhSuitability, result.rtrwh.potentialLitresPerYear);
+  const waterQualityCriterion = ar.criteria.find(
     (criterion) => criterion.criterion === "water_quality_and_contamination_risk",
   );
+  const location = result.derived.normalizedLocation?.canonicalName ?? input.location;
+  const authorities = Array.from(new Set(result.sources.map((source) => source.authority)));
 
   return (
     <main className="page-main results-main">
@@ -78,22 +113,17 @@ export default function ResultPage() {
         <div className="shell result-title-layout">
           <div>
             <span className="breadcrumb">Home <b aria-hidden="true">/</b> Assessment Result</span>
-            <h1>Rainwater &amp; Recharge Assessment</h1>
-            <p>Preliminary assessment summary for the property information provided.</p>
+            <h1>Assessment Result</h1>
+            <p>Preliminary rainwater harvesting and artificial recharge assessment.</p>
           </div>
           <Link className="button button-light" href="/assessment">← Back to Inputs</Link>
         </div>
       </div>
 
-      <div className="shell page-content result-content">
-        <section className="completion-panel" aria-labelledby="completion-title">
-          <span className="completion-icon" aria-hidden="true">✓</span>
-          <div>
-            <span>Assessment status</span>
-            <h2 id="completion-title">Preliminary Assessment Generated</h2>
-            <p>Unavailable results identify evidence or site information still required.</p>
-          </div>
-          <StatusBadge value={displayLabel(result.assessmentStatus)} />
+      <div className="shell page-content result-content compact-results">
+        <section className="result-location" aria-label="Assessment location">
+          <span>Location</span>
+          <strong>{location}</strong>
         </section>
 
         {result.isDemoData && (
@@ -102,204 +132,116 @@ export default function ResultPage() {
           </InfoNotice>
         )}
 
-        <ResultSection title="Property Summary" eyebrow="Information provided">
-          <dl className="property-summary-grid">
-            <div><dt>Location / Locality</dt><dd>{input.location}</dd></div>
-            {result.derived.normalizedLocation && (
-              <div>
-                <dt>Resolved Rainfall Location</dt>
-                <dd>{result.derived.normalizedLocation.canonicalName}</dd>
-              </div>
-            )}
-            <div><dt>Roof Area</dt><dd>{input.roofAreaM2} m²</dd></div>
-            <div><dt>Roof Material</dt><dd>{displayLabel(input.roofMaterial)}</dd></div>
-            <div><dt>Available Ground Area</dt><dd>{input.availableGroundAreaM2} m²</dd></div>
-            {input.storageCapacityLitres != null && <div><dt>Tank Capacity Used for Recharge Water Balance</dt><dd>{input.storageCapacityLitres} litres</dd></div>}
-            <div><dt>Building Basement</dt><dd>{input.buildingHasBasement === undefined ? "Not provided" : input.buildingHasBasement ? "Yes" : "No"}</dd></div>
-          </dl>
-        </ResultSection>
-
-        <div className="result-two-column">
-          <ResultSection title="Rooftop Rainwater Harvesting" eyebrow="Annual potential" className="harvest-section">
-            <p className="metric-label">Estimated Harvestable Rainwater</p>
-            <MetricValue amount={result.rtrwh.potentialLitresPerYear} unit="L/year" />
-            <dl className="supporting-values">
-              <div><dt>Annual rainfall used</dt><dd>{value(result.derived.annualRainfallMm, " mm/year")}</dd></div>
-              <div><dt>Runoff coefficient</dt><dd>{result.derived.runoffCoefficient ?? "Unavailable"}</dd></div>
-              <div><dt>Roof area</dt><dd>{input.roofAreaM2} m²</dd></div>
-            </dl>
-            <details className="calculation-details">
-              <summary>How was this calculated?</summary>
-              <div>
-                <p>Roof area × annual rainfall × runoff coefficient = estimated harvestable rainwater.</p>
-                <div className="formula-row">
-                  <span>{input.roofAreaM2} m²</span><b>×</b><span>{value(result.derived.annualRainfallMm, " mm")}</span><b>×</b><span>{result.derived.runoffCoefficient ?? "Unavailable"}</span><b>=</b><strong>{value(result.rtrwh.potentialLitresPerYear, " L/year")}</strong>
-                </div>
-                <small>Rainfall source: {result.derived.rainfallSource ?? "Not configured"}</small>
-                {result.derived.rainfall?.referencePeriod && (
-                  <small>Reference period: {result.derived.rainfall.referencePeriod}</small>
-                )}
-                {result.derived.rainfall?.spatialResolution && (
-                  <small>Resolution: {result.derived.rainfall.spatialResolution}</small>
-                )}
-                {result.derived.rainfall?.sourceUrl && (
-                  <small><a href={result.derived.rainfall.sourceUrl} target="_blank" rel="noreferrer">View rainfall source</a></small>
-                )}
-                {result.derived.rainfall?.message && <p>{result.derived.rainfall.message}</p>}
-                {result.derived.runoffCoefficientEvidence?.message && <p>{result.derived.runoffCoefficientEvidence.message}</p>}
-                {result.formula.grossRainfallVolumeLitres != null && (
-                  <p>Gross rainfall volume: {value(result.formula.grossRainfallVolumeLitres, " L/year")}. Estimated losses represented by the runoff coefficient: {value(result.formula.estimatedLossesLitres ?? null, " L/year")}.</p>
-                )}
-                {result.formula.methodId && <small>Method: {result.formula.methodId}</small>}
-              </div>
-            </details>
-          </ResultSection>
-
-          <ResultSection title="Recommended RTRWH Size" eyebrow="Indicative storage">
-            <p className="metric-label">Indicative RTRWH Size</p>
-            <MetricValue amount={result.rtrwh.recommendedSizeLitres} unit="litres" />
-            {result.rtrwh.recommendedSizeLitres != null && (
-              <dl className="supporting-values single-column">
-                <div><dt>Planned monthly use</dt><dd>{value(result.rtrwh.demandUsedLitresPerMonth ?? null, " L/month")}</dd></div>
-                <div><dt>Modeled normal-year supply</dt><dd>{value(result.rtrwh.estimatedSupplyLitres ?? null, " L/year")}</dd></div>
-                <div><dt>Modeled overflow</dt><dd>{value(result.rtrwh.estimatedOverflowLitres ?? null, " L/year")}</dd></div>
-                <div><dt>Normal-year demand met</dt><dd>{value(result.rtrwh.demandMetPercent ?? null, "%")}</dd></div>
-              </dl>
-            )}
-            {result.rtrwh.sizingMessage && (
-              <p className={result.rtrwh.recommendedSizeLitres == null ? "unavailable-message" : "section-note"}>{result.rtrwh.sizingMessage}</p>
-            )}
-            {result.rtrwh.sizingRainfallResolution && <p className="section-note">Rainfall input: {result.rtrwh.sizingRainfallResolution}. Design period: {result.rtrwh.sizingDesignPeriod}.</p>}
-          </ResultSection>
-        </div>
-
-        <div className="result-two-column">
-          <ResultSection title="Artificial Recharge Assessment" eyebrow="Site suitability">
-            <div className="status-metric">
-              <span>Artificial Recharge Potential</span>
-              <StatusBadge value={displayLabel(rechargeStatus)} />
-            </div>
-            <dl className="supporting-values single-column">
-              <div><dt>Water potentially available for recharge</dt><dd>{value(result.artificialRecharge.potentialRechargeLitresPerYear, " L/year")}</dd></div>
-              {result.artificialRecharge.annualDemandSuppliedLitres != null && <div><dt>Water supplied from storage</dt><dd>{value(result.artificialRecharge.annualDemandSuppliedLitres, " L/year")}</dd></div>}
-              {result.artificialRecharge.annualOverflowLitres != null && <div><dt>Tank overflow</dt><dd>{value(result.artificialRecharge.annualOverflowLitres, " L/year")}</dd></div>}
-              {result.artificialRecharge.endingStorageLitres != null && <div><dt>Storage remaining at year end</dt><dd>{value(result.artificialRecharge.endingStorageLitres, " L")}</dd></div>}
-            </dl>
-            {arMessage && <p className="unavailable-message">{arMessage}</p>}
-            {result.artificialRecharge.criteria && result.artificialRecharge.criteria.length > 0 && (
-              <details className="calculation-details">
-                <summary>Why is this the current result?</summary>
-                <div>
-                  <ul>
-                    {result.artificialRecharge.criteria.map((criterion) => (
-                      <li key={criterion.criterion}>
-                        <strong>{displayLabel(criterion.criterion)}:</strong> {criterion.reason}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-            )}
-            {result.artificialRecharge.quantityMethodId && <p className="section-note">Water-balance method: {result.artificialRecharge.quantityMethodId}. Overflow is water available for routing, not confirmed aquifer recharge.</p>}
-            <p className="section-note">This is a preliminary on-spot assessment and does not replace site-specific hydrogeological investigation.</p>
-          </ResultSection>
-
-          <ResultSection title="AR Structure Assessment" eyebrow="Conditional, indicative result">
-            <div className="structure-summary">
-              <div><span>Selection status</span><strong>{displayLabel(result.artificialRecharge.structureSelectionStatus ?? null)}</strong></div>
-              <div><span>Structure option</span><strong>{result.artificialRecharge.recommendedStructure?.displayName ?? "Unavailable"}</strong></div>
-              <div><span>Sizing status</span><strong>{displayLabel(result.artificialRecharge.sizingStatus ?? null)}</strong></div>
-              <div><span>Published indicative dimensions</span><strong><Dimensions dimensions={result.artificialRecharge.dimensions} /></strong></div>
-              {result.artificialRecharge.requiredFootprintM2 != null && <div><span>Internal footprint</span><strong>{result.artificialRecharge.requiredFootprintM2} m²</strong></div>}
-            </div>
-            {result.artificialRecharge.selectionReasons && result.artificialRecharge.selectionReasons.length > 0 && (
-              <div className="section-note"><strong>Why this structure</strong><ul>{result.artificialRecharge.selectionReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></div>
-            )}
-            {result.artificialRecharge.rejectedStructures && result.artificialRecharge.rejectedStructures.length > 0 && (
-              <details className="calculation-details"><summary>Rejected alternatives</summary><div><ul>{result.artificialRecharge.rejectedStructures.map((item) => <li key={`${item.structure}-${item.reason}`}><strong>{displayLabel(item.structure)}:</strong> {item.reason}</li>)}</ul></div></details>
-            )}
-            {result.artificialRecharge.alternativeStructures && result.artificialRecharge.alternativeStructures.length > 0 && (
-              <div className="section-note">
-                <strong>Other conditionally feasible options</strong>
-                <ul>{result.artificialRecharge.alternativeStructures.map((structure) => <li key={structure}>{displayLabel(structure)}</li>)}</ul>
-                <p>Final selection requires the stated field verification.</p>
-              </div>
-            )}
-            {result.artificialRecharge.filterMedia && result.artificialRecharge.filterMedia.length > 0 && (
-              <details className="calculation-details"><summary>Filter and media requirements</summary><div><ul>{result.artificialRecharge.filterMedia.map((item) => <li key={item}>{item}</li>)}</ul></div></details>
-            )}
-            {result.artificialRecharge.fieldVerificationRequired && result.artificialRecharge.fieldVerificationRequired.length > 0 && (
-              <InfoNotice title="Field verification required" tone="warning"><ul>{result.artificialRecharge.fieldVerificationRequired.map((item) => <li key={item}>{item}</li>)}</ul></InfoNotice>
-            )}
-            {!result.artificialRecharge.recommendedStructure && (
-              <p className="unavailable-message">{arMessage ?? "A validated structure-selection rule is not currently available for this property configuration."}</p>
-            )}
-          </ResultSection>
-        </div>
-
-        {environmental && (
-          <ResultSection title="Environmental Evidence" eyebrow="Artificial recharge inputs">
-            <dl className="property-summary-grid">
-              <div>
-                <dt>Groundwater observation</dt>
-                <dd>
-                  {environmental.groundwater.observation
-                    ? `${environmental.groundwater.observation.depthBelowGroundLevelM} m bgl at ${environmental.groundwater.observation.stationName}`
-                    : displayLabel(environmental.groundwater.status)}
-                </dd>
-              </div>
-              <div><dt>Groundwater data quality</dt><dd>{displayLabel(environmental.groundwater.status)}</dd></div>
-              <div><dt>Regional soil / infiltration proxy</dt><dd>{environmental.soil.information?.soilTexture ?? environmental.soil.information?.soilClass ?? displayLabel(environmental.soil.status)}</dd></div>
-              <div><dt>Regional geology</dt><dd>{environmental.hydrogeology.information?.geology ?? displayLabel(environmental.hydrogeology.geologyStatus)}</dd></div>
-              <div><dt>Regional geomorphology</dt><dd>{environmental.hydrogeology.information?.geomorphology ?? displayLabel(environmental.hydrogeology.geomorphologyStatus)}</dd></div>
-              <div><dt>Regional aquifer / prospects</dt><dd>{environmental.hydrogeology.information?.aquiferType ?? environmental.hydrogeology.information?.groundwaterProspect ?? displayLabel(environmental.hydrogeology.aquiferStatus)}</dd></div>
-              <div><dt>Water-quality verification</dt><dd>{waterQualityCriterion ? displayLabel(waterQualityCriterion.result) : "Unavailable"}</dd></div>
-            </dl>
-            {environmental.groundwater.observation && (
-              <p className="section-note">
-                Observation period: {environmental.groundwater.observation.observationDate ?? environmental.groundwater.observation.observationPeriod ?? "Not specified"}; approximate distance from property: {value(environmental.groundwater.observation.distanceFromPropertyM, " m")}. This nearby observation is not the exact water level at the property.
-              </p>
-            )}
-            {result.artificialRecharge.fieldTestsRecommended && result.artificialRecharge.fieldTestsRecommended.length > 0 && (
-              <InfoNotice title="Site tests required" tone="warning"><ul>{result.artificialRecharge.fieldTestsRecommended.map((item) => <li key={item}>{item}</li>)}</ul></InfoNotice>
-            )}
-            {environmental.soil.information && (
-              <p className="section-note">The displayed soil is regional mapped evidence. Measured property infiltration: {environmental.soil.information.measuredInfiltrationRateMmPerHr == null ? "not available" : `${environmental.soil.information.measuredInfiltrationRateMmPerHr} mm/hour`}.</p>
-            )}
-            {waterQualityCriterion && <p className="section-note">{waterQualityCriterion.reason}</p>}
-            <p className="section-note">{environmental.soil.message}</p>
-            <p className="section-note">{environmental.hydrogeology.message}</p>
-          </ResultSection>
-        )}
-
-        <ResultSection title="Overall Assessment" eyebrow="Summary status" className="overall-section">
-          <div className="overall-summary">
-            <p>{result.rtrwhSuitability === "SUITABLE" ? "The property shows preliminary potential for rooftop rainwater harvesting based on the configured dataset and rules." : "More configured engineering data is required to complete the rooftop rainwater assessment."}</p>
-            <div className="status-table">
-              <div><span>RTRWH suitability</span><StatusBadge value={displayLabel(result.rtrwhSuitability)} /></div>
-              <div><span>AR suitability</span><StatusBadge value={displayLabel(rechargeStatus)} /></div>
-              <div><span>Data completeness</span><StatusBadge value={displayLabel(result.dataCompleteness)} /></div>
-            </div>
+        <ResultSection title="Rooftop Rainwater Harvesting" eyebrow="Key results" className="essential-results">
+          <div className="result-metrics-grid">
+            <ResultMetric label="Annual Rainwater Harvest" amount={result.rtrwh.potentialLitresPerYear} unit="L/year" />
+            <ResultMetric label="Recommended Tank Size" amount={result.rtrwh.recommendedSizeLitres} unit="litres" />
+            <ResultMetric label="Water Available for Recharge" amount={ar.potentialRechargeLitresPerYear} unit="L/year" />
           </div>
         </ResultSection>
 
-        {result.sources && result.sources.length > 0 && (
-          <ResultSection title="Methods and Sources" eyebrow="Provenance">
-            <p className="section-note">Sources listed here support the methods and data requirements shown in this assessment. Their presence does not mean an unavailable site value was inferred.</p>
-            <ul>
-              {result.sources.map((source) => (
-                <li key={source.sourceId}>
-                  <a href={source.sourceUrl}>{source.authority}: {source.documentTitle}</a>
-                  {source.section ? ` — ${source.section}` : ""}
-                  {source.page ? `, page ${source.page}` : ""}
-                </li>
-              ))}
-            </ul>
-          </ResultSection>
-        )}
+        <ResultSection title="Artificial Recharge" eyebrow="Preliminary recommendation" className="essential-results">
+          {!hasStructure ? (
+            <div className="ar-unavailable" role="status">
+              <StatusBadge value={arStatus} />
+              <h3>Detailed AR assessment is not yet available for this location.</h3>
+              <p>Rainwater harvesting can still be assessed, but the groundwater, soil/infiltration, hydrogeological, or regional design evidence needed for a detailed recharge recommendation has not yet been validated here.</p>
+            </div>
+          ) : (
+            <>
+              <div className="ar-summary-grid">
+                <div><span>AR Status</span><StatusBadge value={arStatus} /></div>
+                <div><span>Suggested Structure</span><strong>{ar.recommendedStructure?.displayName}</strong></div>
+                <div><span>Indicative Design</span><strong>{ar.dimensions ? "Available" : "Requires site verification"}</strong></div>
+              </div>
+              {ar.dimensions && (
+                <div className="indicative-dimensions">
+                  <h3>Indicative Dimensions</h3>
+                  <Dimensions dimensions={ar.dimensions} />
+                </div>
+              )}
+              {(ar.fieldVerificationRequired.length > 0 || ar.fieldTestsRecommended.length > 0) && (
+                <p className="field-check-summary">
+                  Field checks are required before construction.
+                  {ar.recommendedStructure?.type.includes("WELL") && " Final recharge-well and aquifer intake depth must be confirmed on site."}
+                </p>
+              )}
+            </>
+          )}
+        </ResultSection>
 
-        <InfoNotice title="Important disclaimer" tone="warning">
-          <p>This tool provides a preliminary assessment based on the information provided and configured engineering datasets/rules. Final construction should follow applicable government guidelines and, where necessary, professional site assessment.</p>
+        <ResultSection title="Overall Assessment" eyebrow="At a glance" className="overall-section">
+          <div className="simple-overall">
+            <div><span aria-hidden="true">{result.rtrwh.potentialLitresPerYear !== null ? "✓" : "!"}</span><p>Rainwater Harvesting<strong>{rtrwhStatus}</strong></p></div>
+            <div><span aria-hidden="true">{arStatus === "Suitable" ? "✓" : "!"}</span><p>Artificial Recharge<strong>{arStatus === "Not assessable" ? "Detailed assessment not available for this location" : arStatus}</strong></p></div>
+          </div>
+        </ResultSection>
+
+        <div className="result-disclosures">
+          <details className="calculation-details">
+            <summary>How was this calculated?</summary>
+            <div>
+              <p><strong>Annual harvest:</strong> rainfall × roof area × runoff coefficient.</p>
+              <div className="formula-row">
+                <span>{value(result.derived.annualRainfallMm, " mm")}</span><b>×</b><span>{input.roofAreaM2} m²</span><b>×</b><span>{result.derived.runoffCoefficient ?? "Unavailable"}</span><b>=</b><strong>{value(result.rtrwh.potentialLitresPerYear, " L/year")}</strong>
+              </div>
+              <p><strong>Tank and recharge water:</strong> monthly rainfall, planned monthly use, and tank capacity are simulated over the normal year. Overflow is reported as water potentially available for recharge; it is not confirmed aquifer recharge.</p>
+              <dl className="technical-list">
+                <div><dt>Monthly use</dt><dd>{value(result.rtrwh.demandUsedLitresPerMonth, " L/month")}</dd></div>
+                <div><dt>Modeled supply</dt><dd>{value(result.rtrwh.estimatedSupplyLitres, " L/year")}</dd></div>
+                <div><dt>Modeled overflow</dt><dd>{value(result.rtrwh.estimatedOverflowLitres, " L/year")}</dd></div>
+                <div><dt>Demand met</dt><dd>{value(result.rtrwh.demandMetPercent, "%")}</dd></div>
+              </dl>
+            </div>
+          </details>
+
+          <details className="calculation-details">
+            <summary>Technical site evidence</summary>
+            <div>
+              <dl className="technical-list">
+                <div><dt>Rainfall evidence</dt><dd>{value(result.derived.annualRainfallMm, " mm/year")} — {result.derived.rainfallSource ?? "source unavailable"}</dd></div>
+                <div><dt>Runoff coefficient</dt><dd>{result.derived.runoffCoefficient ?? "Unavailable"}</dd></div>
+                <div><dt>Feasibility status</dt><dd>{displayLabel(ar.feasibilityStatus)}</dd></div>
+                <div><dt>Structure-selection status</dt><dd>{displayLabel(ar.structureSelectionStatus)}</dd></div>
+                <div><dt>Sizing status</dt><dd>{displayLabel(ar.sizingStatus)}</dd></div>
+                <div><dt>Harvest calculation method</dt><dd>{result.formula.methodId}</dd></div>
+                <div><dt>Storage sizing method</dt><dd>{result.rtrwh.sizingMethodId}</dd></div>
+                <div><dt>Recharge water-balance method</dt><dd>{ar.quantityMethodId}</dd></div>
+                <div><dt>Structure sizing method</dt><dd>{ar.sizingMethodId}</dd></div>
+                <div><dt>Water-quality verification</dt><dd>{waterQualityCriterion ? displayLabel(waterQualityCriterion.result) : "Not available"}</dd></div>
+                {environmental && <>
+                  <div><dt>Groundwater observation</dt><dd>{environmental.groundwater.observation ? `${environmental.groundwater.observation.depthBelowGroundLevelM} m bgl at ${environmental.groundwater.observation.stationName} (${displayLabel(environmental.groundwater.status)})` : displayLabel(environmental.groundwater.status)}</dd></div>
+                  <div><dt>Regional soil / infiltration evidence</dt><dd>{environmental.soil.information?.soilTexture ?? environmental.soil.information?.soilClass ?? displayLabel(environmental.soil.status)}</dd></div>
+                  <div><dt>Regional geology</dt><dd>{environmental.hydrogeology.information?.geology ?? displayLabel(environmental.hydrogeology.geologyStatus)}</dd></div>
+                  <div><dt>Regional geomorphology</dt><dd>{environmental.hydrogeology.information?.geomorphology ?? displayLabel(environmental.hydrogeology.geomorphologyStatus)}</dd></div>
+                  <div><dt>Regional aquifer / prospects</dt><dd>{environmental.hydrogeology.information?.aquiferType ?? environmental.hydrogeology.information?.groundwaterProspect ?? displayLabel(environmental.hydrogeology.aquiferStatus)}</dd></div>
+                </>}
+              </dl>
+              {environmental?.groundwater.observation && <p>This is a nearby observation approximately {value(environmental.groundwater.observation.distanceFromPropertyM, " m")} from the property, not a measurement directly beneath it. Observation: {environmental.groundwater.observation.observationDate ?? environmental.groundwater.observation.observationPeriod ?? "date unavailable"}.</p>}
+              {environmental?.soil.information && <p>Regional mapped soil is a proxy. Measured property infiltration is {environmental.soil.information.measuredInfiltrationRateMmPerHr == null ? "not available" : `${environmental.soil.information.measuredInfiltrationRateMmPerHr} mm/hour`}.</p>}
+              {ar.criteria.length > 0 && <><h3>Feasibility conditions</h3><ul>{ar.criteria.map((criterion) => <li key={criterion.criterion}><strong>{displayLabel(criterion.criterion)}:</strong> {criterion.reason}</li>)}</ul></>}
+              {ar.selectionReasons.length > 0 && <><h3>Selection reasons</h3><ul>{ar.selectionReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></>}
+              {ar.rejectedStructures.length > 0 && <><h3>Rejected alternatives</h3><ul>{ar.rejectedStructures.map((item) => <li key={`${item.structure}-${item.reason}`}><strong>{displayLabel(item.structure)}:</strong> {item.reason}</li>)}</ul></>}
+              {ar.alternativeStructures.length > 0 && <><h3>Other conditional options</h3><ul>{ar.alternativeStructures.map((item) => <li key={item}>{displayLabel(item)}</li>)}</ul></>}
+              {ar.filterMedia.length > 0 && <><h3>Filter and media requirements</h3><ul>{ar.filterMedia.map((item) => <li key={item}>{item}</li>)}</ul></>}
+              {[...ar.fieldTestsRecommended, ...ar.fieldVerificationRequired].length > 0 && <><h3>Field verification required</h3><ul>{[...new Set([...ar.fieldTestsRecommended, ...ar.fieldVerificationRequired])].map((item) => <li key={item}>{item}</li>)}</ul></>}
+              {ar.message && <p>{ar.message}</p>}
+            </div>
+          </details>
+
+          {result.sources.length > 0 && (
+            <details className="calculation-details">
+              <summary>Sources: {authorities.join(" · ")}</summary>
+              <div>
+                <p>Sources support the methods and evidence shown; a listed source does not imply that unavailable property data was inferred.</p>
+                <ul>{result.sources.map((source) => <li key={source.sourceId}><a href={source.sourceUrl} target="_blank" rel="noreferrer">{source.authority}: {source.documentTitle}</a>{source.section ? ` — ${source.section}` : ""}{source.page ? `, page ${source.page}` : ""}</li>)}</ul>
+              </div>
+            </details>
+          )}
+        </div>
+
+        <InfoNotice title="Preliminary assessment" tone="warning">
+          <p>Field infiltration, groundwater and water-quality verification may be required before construction. Follow applicable government guidance and obtain professional site assessment where indicated.</p>
         </InfoNotice>
 
         <div className="result-actions">

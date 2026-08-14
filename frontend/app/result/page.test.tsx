@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AssessmentResult } from "@/lib/types";
 import ResultPage from "./page";
@@ -201,37 +201,23 @@ beforeEach(() => {
 });
 
 describe("assessment results", () => {
-  it("renders source-backed harvest details and honest unavailable decisions", () => {
+  it("keeps RTRWH visible and shows one clear message when detailed AR is unavailable", () => {
     sessionValue.mockReturnValue(JSON.stringify(sourceBackedResult));
     render(<ResultPage />);
 
-    expect(screen.getByRole("heading", { name: "Rainwater & Recharge Assessment" })).toBeInTheDocument();
-    expect(screen.getAllByText("15,000").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Assessment Result" })).toBeInTheDocument();
+    expect(screen.getByText("Annual Rainwater Harvest")).toBeInTheDocument();
+    expect(screen.getByText("15,000")).toBeInTheDocument();
+    expect(screen.getByText("Recommended Tank Size")).toBeInTheDocument();
     expect(screen.getByText("5,000")).toBeInTheDocument();
-    expect(screen.getByText("litres")).toBeInTheDocument();
-    expect(screen.getByText("2,000 L/month")).toBeInTheDocument();
-    expect(screen.getByText("83%")).toBeInTheDocument();
-    expect(screen.getByText(/Design period: July-June normal year/)).toBeInTheDocument();
-    expect(screen.getByText(/Gross rainfall volume: 20,000 L\/year/)).toBeInTheDocument();
     expect(screen.getByText("Example District, Example State, India")).toBeInTheDocument();
-    expect(screen.getByText("Reference period: CGWB worked example")).toBeInTheDocument();
-    expect(screen.getByText("Resolution: worked example")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View rainfall source" })).toHaveAttribute(
-      "href",
-      "https://cgwb.gov.in/example-rainfall.pdf",
-    );
-    expect(screen.getAllByText("Insufficient data").length).toBeGreaterThan(0);
-    expect(screen.getByText(/No applicable CGWB\/NAQUIM feature/)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Environmental Evidence" })).toBeInTheDocument();
-    expect(screen.getByText("3 m bgl at Jayanagar")).toBeInTheDocument();
-    expect(screen.getByText(/field infiltration\/percolation test/)).toBeInTheDocument();
-    expect(screen.getByText("Water-quality verification")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Manual on Artificial Recharge/ })).toHaveAttribute(
-      "href",
-      "https://cgwb.gov.in/example.pdf",
-    );
+    expect(screen.getByText("Detailed AR assessment is not yet available for this location.")).toBeInTheDocument();
+    expect(screen.getAllByText("Not assessable")).toHaveLength(1);
+    expect(screen.queryByText("Structure option")).not.toBeInTheDocument();
+    expect(screen.queryByText("Published indicative dimensions")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Environmental Evidence" })).not.toBeInTheDocument();
+    expect(screen.getByText("Technical site evidence").closest("details")).not.toHaveAttribute("open");
     expect(screen.getByRole("link", { name: "← Back to Inputs" })).toHaveAttribute("href", "/assessment");
-    expect(screen.queryByText("Recharge Trench")).not.toBeInTheDocument();
   });
 
   it("renders unavailable source data without substituting numeric results", () => {
@@ -266,12 +252,12 @@ describe("assessment results", () => {
     sessionValue.mockReturnValue(JSON.stringify(unavailable));
     render(<ResultPage />);
 
-    expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(3);
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(0);
     expect(screen.queryByText("15,000")).not.toBeInTheDocument();
     expect(screen.queryByText("6,000")).not.toBeInTheDocument();
   });
 
-  it("renders recharge balance, structure reasoning, dimensions, and field checks", () => {
+  it("renders a compact supported AR result and keeps engineering evidence expandable", () => {
     const rechargeResult: AssessmentResult = {
       ...sourceBackedResult,
       inputs: {
@@ -303,14 +289,20 @@ describe("assessment results", () => {
     sessionValue.mockReturnValue(JSON.stringify(rechargeResult));
     render(<ResultPage />);
 
-    expect(screen.getAllByText("1,000 L/year").length).toBeGreaterThan(0);
+    expect(screen.getByText("Water Available for Recharge")).toBeInTheDocument();
+    expect(screen.getByText("1,000")).toBeInTheDocument();
+    expect(screen.getByText("AR Status")).toBeInTheDocument();
+    expect(screen.getAllByText("Suitable").length).toBeGreaterThan(0);
     expect(screen.getByText("Recharge Trench")).toBeInTheDocument();
-    expect(screen.getByText("Recommended")).toBeInTheDocument();
-    expect(screen.getByText("Indicative design available")).toBeInTheDocument();
-    expect(screen.getByText("Trench: 1.2 m × 1.2 m × 1.4 m")).toBeInTheDocument();
+    expect(screen.getByText("1.2 m × 1.2 m × 1.4 m")).toBeInTheDocument();
+    expect(screen.getByText(/Field checks are required before construction/)).toBeInTheDocument();
+    const details = screen.getByText("Technical site evidence").closest("details");
+    expect(details).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Technical site evidence"));
+    expect(details).toHaveAttribute("open");
     expect(screen.getByText("Reviewed formation is alluvial.")).toBeInTheDocument();
-    expect(screen.getByText("Field verification required")).toBeInTheDocument();
-    expect(screen.getByText(/overflow is water available for routing/i)).toBeInTheDocument();
+    expect(screen.getByText("Depth condition not met.")).toBeInTheDocument();
+    expect(screen.getByText(/Complete a property-level infiltration test/)).toBeInTheDocument();
   });
 
   it("renders conditional recharge-well options without inventing intake depth", () => {
@@ -335,10 +327,14 @@ describe("assessment results", () => {
     render(<ResultPage />);
 
     expect(screen.getByText("Recharge Well")).toBeInTheDocument();
-    expect(screen.getByText("0.91 m diameter × 3.35 m published minimum geometric depth")).toBeInTheDocument();
-    expect(screen.getByText("Other conditionally feasible options")).toBeInTheDocument();
+    expect(screen.getByText("0.91 m diameter × 3.35 m published minimum depth")).toBeInTheDocument();
+    expect(screen.getAllByText("Conditional").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Partial indicative design")).not.toBeVisible();
+    fireEvent.click(screen.getByText("Technical site evidence"));
+    expect(screen.getByText("Other conditional options")).toBeInTheDocument();
     expect(screen.getByText("Recharge pit")).toBeInTheDocument();
     expect(screen.getByText(/Confirm a suitable aquifer intake zone/)).toBeInTheDocument();
+    expect(screen.getByText(/Final recharge-well and aquifer intake depth must be confirmed on site/)).toBeInTheDocument();
   });
 
   it("offers the assessment route when no stored result exists", () => {

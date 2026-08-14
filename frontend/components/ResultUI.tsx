@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 export function StatusBadge({ value }: { value: string | null }) {
-  const normalized = (value ?? "unavailable").toLowerCase().replaceAll("_", "-");
+  const normalized = (value ?? "unavailable").toLowerCase().replaceAll(/[_\s]+/g, "-");
   return <span className={`status-badge status-${normalized}`}>{value ?? "Unavailable"}</span>;
 }
 
