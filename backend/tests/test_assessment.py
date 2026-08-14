@@ -112,6 +112,27 @@ class DelhiGroundwaterProvider:
         )
 
 
+class UnavailableGroundwaterProvider:
+    def lookup(self, _location: NormalizedLocation) -> GroundwaterLookup:
+        return GroundwaterLookup(
+            status=DataStatus.DATA_UNAVAILABLE,
+            message="No deterministic groundwater observation is available.",
+        )
+
+
+class ShallowDelhiGroundwaterProvider(DelhiGroundwaterProvider):
+    def lookup(self, location: NormalizedLocation) -> GroundwaterLookup:
+        result = super().lookup(location)
+        assert result.observation is not None
+        return result.model_copy(
+            update={
+                "observation": result.observation.model_copy(
+                    update={"depth_below_ground_level_m": 2.5}
+                )
+            }
+        )
+
+
 class DelhiSoilProvider:
     def lookup(self, _location: NormalizedLocation) -> SoilLookup:
         return SoilLookup(
@@ -126,6 +147,23 @@ class DelhiSoilProvider:
                 provenance=TEST_PROVENANCE,
             ),
             message="Deterministic property measurement fixture.",
+        )
+
+
+class RegionalDelhiSoilProvider:
+    def lookup(self, _location: NormalizedLocation) -> SoilLookup:
+        return SoilLookup(
+            status=DataStatus.DATA_AVAILABLE,
+            information=SoilInformation(
+                recordId="fixture-regional-soil",
+                soilClass="regional alluvial soil",
+                measuredInfiltrationRateMmPerHr=None,
+                infiltrationDataType=InfiltrationDataType.REGIONAL_SOIL_PROXY,
+                spatialResolution=EnvironmentalResolution.REGIONAL_LAYER,
+                fieldTestRecommended=True,
+                provenance=TEST_PROVENANCE,
+            ),
+            message="Regional soil proxy fixture; field infiltration testing is required.",
         )
 
 
@@ -153,14 +191,33 @@ class DelhiHydrogeologyProvider:
 
 
 class DelhiRainfallProvider:
+    def __init__(
+        self,
+        month_values: tuple[float, ...] | None = None,
+    ) -> None:
+        self.month_values = month_values or (
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            100.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        )
+
     def lookup(self, _location: NormalizedLocation) -> RainfallLookup:
-        month_values = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0)
+        annual_rainfall = sum(self.month_values)
         return RainfallLookup(
             status=DataStatus.DATA_AVAILABLE,
             record=RainfallRecord(
                 recordId="fixture-rainfall",
                 locationName="New Delhi",
-                rainfallMm=100,
+                rainfallMm=annual_rainfall,
                 statisticType="DETERMINISTIC_TEST_SERIES",
                 referencePeriod="test fixture",
                 spatialResolution="deterministic test fixture",
@@ -171,7 +228,7 @@ class DelhiRainfallProvider:
                 datasetVersion="test fixture",
                 retrievedAt=datetime(2026, 8, 13, tzinfo=UTC),
                 monthlyNormal=MonthlyRainfallNormal(
-                    valuesMm=month_values,
+                    valuesMm=self.month_values,
                     referencePeriod="test fixture",
                     spatialResolution="deterministic test fixture",
                     sourceId="IMD_DISTRICT_MONTHLY_NORMALS_1971_2020",
@@ -183,6 +240,15 @@ class DelhiRainfallProvider:
                 ),
             ),
             message="Deterministic rainfall fixture.",
+        )
+
+
+class UnavailableRainfallProvider:
+    def lookup(self, _location: NormalizedLocation) -> RainfallLookup:
+        return RainfallLookup(
+            status=DataStatus.DATA_UNAVAILABLE,
+            message="RainfallDataUnavailable: deterministic provider has no record.",
+            errorCode="RAINFALL_DATA_UNAVAILABLE",
         )
 
 
@@ -429,3 +495,170 @@ def test_full_phase_one_flow_reaches_source_backed_ar_design() -> None:
     assert result.artificialRecharge.fieldVerificationRequired
     assert result.dataCompleteness == "GOOD"
     assert "CGWB_DELHI_STANDARD_DESIGNS" in result.artificialRecharge.sourceIds
+    assert result.artificialRecharge.annualHarvestLitres is not None
+    assert result.artificialRecharge.annualDemandSuppliedLitres is not None
+    assert result.artificialRecharge.annualOverflowLitres is not None
+    assert result.artificialRecharge.endingStorageLitres is not None
+    assert result.artificialRecharge.annualHarvestLitres == pytest.approx(
+        result.artificialRecharge.annualDemandSuppliedLitres
+        + result.artificialRecharge.annualOverflowLitres
+        + result.artificialRecharge.endingStorageLitres,
+        abs=0.05,
+    )
+    assert 0 <= result.artificialRecharge.potentialRechargeLitresPerYear <= (
+        result.rtrwh.potentialLitresPerYear
+    )
+
+
+def test_resolved_location_with_missing_rainfall_stops_rtrwh_and_ar_safely() -> None:
+    result = create_assessment(
+        request(
+            location="Delhi",
+            roofMaterial="RCC",
+            monthlyRainwaterDemandLitres=1_000,
+        ),
+        location_resolver=DelhiResolver(),
+        rainfall_provider=UnavailableRainfallProvider(),
+        groundwater_provider=DelhiGroundwaterProvider(),
+        soil_provider=DelhiSoilProvider(),
+        hydrogeology_provider=DelhiHydrogeologyProvider(),
+    )
+
+    assert result.derived.rainfallStatus is DataStatus.DATA_UNAVAILABLE
+    assert result.derived.annualRainfallMm is None
+    assert result.rtrwh.potentialLitresPerYear is None
+    assert result.rtrwh.recommendedSizeLitres is None
+    assert result.artificialRecharge.potentialRechargeLitresPerYear is None
+    assert result.artificialRecharge.recommendedStructure is None
+    assert result.artificialRecharge.dimensions is None
+
+
+def test_missing_groundwater_keeps_rtrwh_but_blocks_ar_decision() -> None:
+    result = create_assessment(
+        request(
+            location="Delhi",
+            roofAreaM2=100,
+            roofMaterial="RCC",
+            monthlyRainwaterDemandLitres=1_000,
+            buildingHasBasement=False,
+            waterQualityStatus="VERIFIED_ACCEPTABLE",
+            waterQualityEvidence="Deterministic qualified-review fixture",
+        ),
+        location_resolver=DelhiResolver(),
+        rainfall_provider=DelhiRainfallProvider(),
+        groundwater_provider=UnavailableGroundwaterProvider(),
+        soil_provider=DelhiSoilProvider(),
+        hydrogeology_provider=DelhiHydrogeologyProvider(),
+    )
+
+    assert result.rtrwh.potentialLitresPerYear == 7_000
+    assert result.artificialRecharge.feasibilityStatus == "INSUFFICIENT_DATA"
+    assert result.artificialRecharge.recommendedStructure is None
+    assert result.artificialRecharge.dimensions is None
+
+
+def test_regional_infiltration_proxy_returns_conditional_with_field_test() -> None:
+    result = create_assessment(
+        request(
+            location="Delhi",
+            roofAreaM2=100,
+            roofMaterial="RCC",
+            monthlyRainwaterDemandLitres=1_000,
+            buildingHasBasement=False,
+            waterQualityStatus="VERIFIED_ACCEPTABLE",
+            waterQualityEvidence="Deterministic qualified-review fixture",
+        ),
+        location_resolver=DelhiResolver(),
+        rainfall_provider=DelhiRainfallProvider(),
+        groundwater_provider=DelhiGroundwaterProvider(),
+        soil_provider=RegionalDelhiSoilProvider(),
+        hydrogeology_provider=DelhiHydrogeologyProvider(),
+    )
+
+    assert result.artificialRecharge.feasibilityStatus == "CONDITIONALLY_ELIGIBLE"
+    assert result.artificialRecharge.fieldTestsRecommended
+    assert any(
+        "field" in reason.casefold()
+        for reason in result.artificialRecharge.conditionsRequiringVerification
+    )
+    assert result.artificialRecharge.structureSelectionStatus == (
+        "CONDITIONAL_RECOMMENDATION"
+    )
+
+
+def test_shallow_post_monsoon_groundwater_rejects_ar_without_structure() -> None:
+    result = create_assessment(
+        request(
+            location="Delhi",
+            roofAreaM2=100,
+            roofMaterial="RCC",
+            monthlyRainwaterDemandLitres=1_000,
+            buildingHasBasement=False,
+            waterQualityStatus="VERIFIED_ACCEPTABLE",
+            waterQualityEvidence="Deterministic qualified-review fixture",
+        ),
+        location_resolver=DelhiResolver(),
+        rainfall_provider=DelhiRainfallProvider(),
+        groundwater_provider=ShallowDelhiGroundwaterProvider(),
+        soil_provider=DelhiSoilProvider(),
+        hydrogeology_provider=DelhiHydrogeologyProvider(),
+    )
+
+    assert result.artificialRecharge.feasibilityStatus == "NOT_ELIGIBLE"
+    assert result.artificialRecharge.conditionsFailed
+    assert result.artificialRecharge.recommendedStructure is None
+    assert result.artificialRecharge.dimensions is None
+
+
+def test_full_flow_rejects_structure_when_site_footprint_is_too_small() -> None:
+    result = create_assessment(
+        request(
+            location="Delhi",
+            roofAreaM2=100,
+            roofMaterial="RCC",
+            availableGroundAreaM2=1,
+            monthlyRainwaterDemandLitres=1_000,
+            buildingHasBasement=False,
+            waterQualityStatus="VERIFIED_ACCEPTABLE",
+            waterQualityEvidence="Deterministic qualified-review fixture",
+        ),
+        location_resolver=DelhiResolver(),
+        rainfall_provider=DelhiRainfallProvider(),
+        groundwater_provider=DelhiGroundwaterProvider(),
+        soil_provider=DelhiSoilProvider(),
+        hydrogeology_provider=DelhiHydrogeologyProvider(),
+    )
+
+    assert result.artificialRecharge.structureSelectionStatus == (
+        "NO_STRUCTURE_FITS_AVAILABLE_AREA"
+    )
+    assert result.artificialRecharge.recommendedStructure is None
+    assert result.artificialRecharge.rejectedStructures
+    assert "exceeds" in result.artificialRecharge.rejectedStructures[-1].reason
+    assert result.artificialRecharge.dimensions is None
+
+
+def test_zero_storage_overflow_produces_no_positive_recharge_or_structure() -> None:
+    result = create_assessment(
+        request(
+            location="Delhi",
+            roofAreaM2=100,
+            roofMaterial="RCC",
+            monthlyRainwaterDemandLitres=1_000,
+            buildingHasBasement=False,
+            waterQualityStatus="VERIFIED_ACCEPTABLE",
+            waterQualityEvidence="Deterministic qualified-review fixture",
+        ),
+        location_resolver=DelhiResolver(),
+        rainfall_provider=DelhiRainfallProvider((100.0,) * 12),
+        groundwater_provider=DelhiGroundwaterProvider(),
+        soil_provider=DelhiSoilProvider(),
+        hydrogeology_provider=DelhiHydrogeologyProvider(),
+    )
+
+    assert result.rtrwh.potentialLitresPerYear == 84_000
+    assert result.rtrwh.estimatedOverflowLitres == 0
+    assert result.artificialRecharge.potentialRechargeLitresPerYear == 0
+    assert result.artificialRecharge.feasibilityStatus == "NOT_ELIGIBLE"
+    assert result.artificialRecharge.recommendedStructure is None
+    assert result.artificialRecharge.dimensions is None
