@@ -31,6 +31,7 @@ class GroundwaterObservation(BaseModel):
     depth_below_ground_level_m: float = Field(
         ge=0, alias="depthBelowGroundLevelM"
     )
+    depth_unit: str = Field(alias="depthUnit")
     observation_date: date = Field(alias="observationDate")
     season: str
     latitude: float = Field(ge=-90, le=90)

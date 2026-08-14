@@ -100,6 +100,7 @@ class DelhiGroundwaterProvider:
                 stationId="fixture-well",
                 stationName="Fixture observation",
                 depthBelowGroundLevelM=10,
+                depthUnit="m bgl",
                 observationDate=date(2025, 11, 15),
                 season="POST_MONSOON",
                 latitude=28.6139,

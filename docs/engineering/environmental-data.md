@@ -9,9 +9,35 @@ The assessment resolves a user location first, then invokes three independent lo
 - Station-coordinate source: CGWB, *Ground Water Quality Data 2020*, Karnataka row 2767.
 - Cache: `backend/app/data/normalized/cgwb_groundwater_observations.json`.
 - Current coverage: one cross-checked Bengaluru Urban station (`W125200077350001`, Jayanagar).
-- Lookup: select the nearest imported station within the resolved state and district; return the calculated distance. There is no invented maximum radius and no fallback to another district.
+- Ingestion: join a reviewed CGWB/India-WRIS water-level CSV to a reviewed official
+  station-coordinate CSV by station ID using
+  `scripts/ingest_cgwb_groundwater.py`. The importer rejects missing depth,
+  unsupported units, invalid coordinates, duplicate station IDs and conflicting
+  district/state metadata. Dataset freshness (`DATA_AVAILABLE` or `DATA_STALE`) is
+  an explicit operator-reviewed import argument; the application does not invent an
+  age threshold.
+- Lookup: select the nearest imported station within the resolved state and district;
+  if the same coordinates have multiple observations, prefer the newest observation
+  date and then station ID. There is no invented maximum radius and no fallback to
+  another district. A deployment may supply an explicitly reviewed maximum distance,
+  in which case observations beyond it return `UNSUPPORTED_LOCATION`.
 - Quality: `DATA_STALE` and `NEARBY_OBSERVATION`. This is not the property's groundwater level and is not sufficient by itself for recharge design.
 - Refresh: obtain the latest official seasonal CGWB/India-WRIS export, join it to official station coordinates by station ID, review source metadata, validate the normalized cache, and replace the versioned cache. Seasonal observations must remain separate.
+
+Example import from reviewed local exports:
+
+```bash
+cd backend
+.venv/bin/python -m scripts.ingest_cgwb_groundwater \
+  --observations path/to/reviewed-water-levels.csv \
+  --stations path/to/reviewed-stations.csv \
+  --dataset-version "reviewed source version" \
+  --dataset-status DATA_STALE \
+  --confirm-official-sources
+```
+
+The command performs no live network call. Source acquisition and review remain a
+separate operator step.
 
 ## Soil and infiltration
 

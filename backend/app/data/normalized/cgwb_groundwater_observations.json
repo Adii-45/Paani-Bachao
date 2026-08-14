@@ -11,6 +11,7 @@
       "stationType": "Bore Well / Piezometer",
       "aquiferNature": "Semi-Confined",
       "depthBelowGroundLevelM": 3.0,
+      "depthUnit": "m bgl",
       "observationDate": "2022-11-05",
       "season": "NOVEMBER_MONITORING",
       "latitude": 12.87,

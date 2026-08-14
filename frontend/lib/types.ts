@@ -134,6 +134,7 @@ export type AssessmentResult = {
           stationId: string;
           stationName: string;
           depthBelowGroundLevelM: number;
+          depthUnit: string;
           observationDate: string;
           season: string;
           distanceFromPropertyM: number | null;
