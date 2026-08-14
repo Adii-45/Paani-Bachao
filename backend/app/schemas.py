@@ -92,8 +92,10 @@ class NormalizedLocationEvidence(BaseModel):
     canonicalName: str
     latitude: float
     longitude: float
+    locality: str | None
     district: str | None
     state: str | None
+    postalCode: str | None
     country: str
     provider: str
     providerPlaceId: str | None
@@ -234,6 +236,22 @@ class FormulaDetails(BaseModel):
     assumptions: list[str]
 
 
+class EnvironmentalProviderEvidence(BaseModel):
+    status: DataStatus
+    evidenceAvailable: bool
+    message: str
+    sourceIds: list[str] = Field(default_factory=list)
+    componentStatuses: dict[str, DataStatus] = Field(default_factory=dict)
+
+
+class EnvironmentalDataEvidence(BaseModel):
+    locationStatus: LocationResolutionStatus
+    rainfall: EnvironmentalProviderEvidence
+    groundwater: EnvironmentalProviderEvidence
+    soil: EnvironmentalProviderEvidence
+    hydrogeology: EnvironmentalProviderEvidence
+
+
 class AssessmentResponse(BaseModel):
     inputs: AssessmentRequest
     derived: DerivedData
@@ -245,5 +263,6 @@ class AssessmentResponse(BaseModel):
     ruleset: str
     isDemoData: bool
     formula: FormulaDetails
+    environmentalData: EnvironmentalDataEvidence
     warnings: list[str]
     sources: list[SourceCitation]

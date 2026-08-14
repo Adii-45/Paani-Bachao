@@ -100,6 +100,7 @@ const sourceBackedResult: AssessmentResult = {
           stationId: "W125200077350001",
           stationName: "Jayanagar",
           depthBelowGroundLevelM: 3,
+          depthUnit: "m bgl",
           observationDate: "2022-11-05",
           season: "NOVEMBER_MONITORING",
           distanceFromPropertyM: 11407.7,

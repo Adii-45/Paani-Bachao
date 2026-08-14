@@ -69,7 +69,9 @@ performed.
 
 - missing/unreadable cache: `DATA_UNAVAILABLE` / `RAINFALL_DATA_UNAVAILABLE`
 - coordinate outside the imported polygons: `UNSUPPORTED_LOCATION`
-- overlapping source polygons: `INSUFFICIENT_DATA`
+- overlapping source polygons: use matching resolver-supplied district/state metadata
+  only when it identifies exactly one published polygon; otherwise
+  `INSUFFICIENT_DATA` / `RAINFALL_LOCATION_AMBIGUOUS`
 - stale cache marked by an operator: `DATA_STALE`, with provenance retained
 
 There is no fallback to current weather or the removed five-city values.

@@ -218,7 +218,7 @@
       "page": null,
       "source_url": "https://gis.nwic.in/server/rest/services/SubInfoSysLCC/Soil_1New/MapServer",
       "accessed_at": "2026-08-13",
-      "notes": "Official service metadata only. No soil record is used until a documented feature/layer is exported and reviewed. Regional soil class must not be converted into a measured infiltration rate."
+      "notes": "Official service metadata advertises map/query capability and GeoJSON support, but the soil sublayer schema/features were not reliably retrievable during implementation. No soil record is used until a documented feature/layer is exported and reviewed. Regional soil class must not be converted into a measured infiltration rate."
     },
     {
       "source_id": "NWIC_GSI_AQUIFER_SYSTEMS",
@@ -229,7 +229,7 @@
       "page": null,
       "source_url": "https://gis.nwic.in/server/rest/services/NWIC/AquiferSystems_GSI/FeatureServer/layers",
       "accessed_at": "2026-08-13",
-      "notes": "Official polygon service advertises aquifer/lithology-related fields. No value is used until a reviewed feature intersecting the property coordinate is imported."
+      "notes": "Official polygon service exposes separate Principal Aquifers and Major Aquifers layers. Published fields include source object ID, aquifer labels and separately named aquifer-characteristic fields. Import mapping must preserve those meanings; no value is used until a reviewed feature intersecting the property coordinate is imported."
     }
   ]
 }

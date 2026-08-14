@@ -2,17 +2,23 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..provenance.models import DataStatus, PublishedRange, ValueProvenance
 
 
 class LocationQuery(BaseModel):
     location: str
-    latitude: float | None = None
-    longitude: float | None = None
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     state: str | None = None
     district: str | None = None
+
+    @model_validator(mode="after")
+    def coordinates_must_be_supplied_together(self) -> "LocationQuery":
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("Latitude and longitude must be supplied together.")
+        return self
 
 
 class RainfallErrorCode(str, Enum):

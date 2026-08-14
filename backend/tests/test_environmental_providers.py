@@ -84,7 +84,7 @@ def test_committed_groundwater_cache_passes_schema_and_source_validation() -> No
 def test_soil_cache_does_not_fabricate_infiltration_rate() -> None:
     result = NormalizedOfficialSoilProvider().lookup(bengaluru_location())
 
-    assert result.status is DataStatus.FIELD_MEASUREMENT_REQUIRED
+    assert result.status is DataStatus.DATA_UNAVAILABLE
     assert result.information is None
     assert "field infiltration/percolation test" in result.message
 
@@ -228,7 +228,7 @@ def test_coordinates_to_ar_environmental_profile_integration() -> None:
     assert profile.groundwater.status is DataStatus.DATA_STALE
     assert profile.groundwater.observation is not None
     assert profile.groundwater.observation.station_id == "W125200077350001"
-    assert profile.soil.status is DataStatus.FIELD_MEASUREMENT_REQUIRED
+    assert profile.soil.status is DataStatus.DATA_UNAVAILABLE
     assert profile.soil.information is None
     assert profile.hydrogeology.geology_status is DataStatus.DATA_UNAVAILABLE
 

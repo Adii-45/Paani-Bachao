@@ -4,6 +4,8 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
+from ..importers.spatial import validated_polygon_geometry
+
 
 RecordT = TypeVar("RecordT", bound=BaseModel)
 
@@ -24,4 +26,22 @@ class NormalizedEnvironmentalRepository:
 
     @staticmethod
     def records(dataset: dict[str, Any], model: type[RecordT]) -> list[RecordT]:
-        return [model.model_validate(item) for item in dataset.get("records", [])]
+        records = [model.model_validate(item) for item in dataset.get("records", [])]
+        for record in records:
+            geometry = getattr(record, "geometry", None)
+            bounding_box = getattr(record, "bounding_box", None)
+            if geometry is None and bounding_box is None:
+                continue
+            if geometry is None or bounding_box is None:
+                raise ValueError(
+                    "Spatial cache records require both geometry and bounding box."
+                )
+            _, calculated_box = validated_polygon_geometry(geometry)
+            if any(
+                abs(expected - actual) > 1e-8
+                for expected, actual in zip(
+                    bounding_box, calculated_box, strict=True
+                )
+            ):
+                raise ValueError("Spatial cache bounding box does not match geometry.")
+        return records

@@ -45,12 +45,21 @@ class NormalizedCgwbGroundwaterProvider:
     """Return the nearest imported observation within the resolved district.
 
     A district match prevents a distant national station from being presented as
-    local. No arbitrary maximum-distance engineering threshold is introduced;
-    the actual distance is returned for the caller to judge.
+    local. No arbitrary maximum-distance engineering threshold is introduced. A
+    deployment may provide an explicitly reviewed maximum distance; otherwise the
+    actual distance is returned for the caller to judge.
     """
 
-    def __init__(self, dataset_path: Path = DEFAULT_DATASET_PATH) -> None:
+    def __init__(
+        self,
+        dataset_path: Path = DEFAULT_DATASET_PATH,
+        *,
+        max_distance_m: float | None = None,
+    ) -> None:
+        if max_distance_m is not None and max_distance_m <= 0:
+            raise ValueError("Configured groundwater lookup distance must be positive.")
         self.repository = NormalizedEnvironmentalRepository(dataset_path)
+        self.max_distance_m = max_distance_m
 
     def lookup(self, location: NormalizedLocation) -> GroundwaterLookup:
         try:
@@ -87,21 +96,39 @@ class NormalizedCgwbGroundwaterProvider:
                 recordCount=len(records),
             )
 
-        nearest = min(
+        # Proximity is the primary matching rule. If multiple observations are at
+        # the same station/coordinates, prefer the newest dated observation, then
+        # station ID for deterministic ordering independent of cache row order.
+        ranked = sorted(
             candidates,
-            key=lambda item: _distance_m(
-                location.latitude,
-                location.longitude,
-                item.latitude,
-                item.longitude,
+            key=lambda item: (
+                _distance_m(
+                    location.latitude,
+                    location.longitude,
+                    item.latitude,
+                    item.longitude,
+                ),
+                -item.observation_date.toordinal(),
+                item.station_id,
             ),
         )
+        nearest = ranked[0]
         distance = _distance_m(
             location.latitude,
             location.longitude,
             nearest.latitude,
             nearest.longitude,
         )
+        if self.max_distance_m is not None and distance > self.max_distance_m:
+            return GroundwaterLookup(
+                status=DataStatus.UNSUPPORTED_LOCATION,
+                message=(
+                    "Groundwater data are unavailable: the nearest reviewed same-district "
+                    f"observation is {round(distance, 1)} m away, beyond the explicitly "
+                    f"configured {self.max_distance_m} m lookup limit."
+                ),
+                recordCount=len(records),
+            )
         nearest = nearest.model_copy(update={"distance_from_property_m": round(distance, 1)})
         unknown_sources = set(nearest.provenance.source_ids) - set(source_registry())
         if unknown_sources:

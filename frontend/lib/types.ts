@@ -19,8 +19,10 @@ export type AssessmentResult = {
       canonicalName: string;
       latitude: number;
       longitude: number;
+      locality?: string | null;
       district: string | null;
       state: string | null;
+      postalCode?: string | null;
       provider: string;
       confidence: string;
     } | null;
@@ -132,6 +134,7 @@ export type AssessmentResult = {
           stationId: string;
           stationName: string;
           depthBelowGroundLevelM: number;
+          depthUnit: string;
           observationDate: string;
           season: string;
           distanceFromPropertyM: number | null;
@@ -183,6 +186,13 @@ export type AssessmentResult = {
     sourceIds?: string[];
     assumptions?: string[];
   };
+  environmentalData?: {
+    locationStatus: string;
+    rainfall: EnvironmentalProviderEvidence;
+    groundwater: EnvironmentalProviderEvidence;
+    soil: EnvironmentalProviderEvidence;
+    hydrogeology: EnvironmentalProviderEvidence;
+  };
   warnings: string[];
   sources?: Array<{
     sourceId: string;
@@ -193,6 +203,14 @@ export type AssessmentResult = {
     page: string | null;
     sourceUrl: string;
   }>;
+};
+
+type EnvironmentalProviderEvidence = {
+  status: string;
+  evidenceAvailable: boolean;
+  message: string;
+  sourceIds: string[];
+  componentStatuses: Record<string, string>;
 };
 
 export const labels: Record<string, string> = {

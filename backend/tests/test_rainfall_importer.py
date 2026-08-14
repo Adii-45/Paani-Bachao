@@ -90,7 +90,7 @@ def test_imd_importer_requires_all_twelve_monthly_layers() -> None:
         raise AssertionError("Importer accepted an incomplete monthly dataset")
 
 
-def test_importer_rejects_missing_authoritative_fields() -> None:
+def test_importer_rejects_missing_rainfall_value() -> None:
     importer = IMDDistrictRainfallImporter()
     incomplete = SOURCE_FIXTURE.replace('"Rainfall (in mm)": 123.4', '"unused": 1')
 
@@ -100,3 +100,29 @@ def test_importer_rejects_missing_authoritative_fields() -> None:
         assert "missing required source fields" in str(exc)
     else:
         raise AssertionError("Importer accepted an incomplete IMD feature")
+
+
+def test_importer_rejects_malformed_rainfall_value() -> None:
+    importer = IMDDistrictRainfallImporter()
+    malformed = SOURCE_FIXTURE.replace(
+        '"Rainfall (in mm)": 123.4', '"Rainfall (in mm)": "not-a-number"'
+    )
+
+    try:
+        importer.normalize(malformed, imported_at=datetime(2026, 8, 13, tzinfo=UTC))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Importer accepted a malformed IMD rainfall value")
+
+
+def test_importer_rejects_negative_rainfall_instead_of_changing_units() -> None:
+    importer = IMDDistrictRainfallImporter()
+    negative = SOURCE_FIXTURE.replace("123.4", "-1")
+
+    try:
+        importer.normalize(negative, imported_at=datetime(2026, 8, 13, tzinfo=UTC))
+    except ValueError as exc:
+        assert "greater than or equal to 0" in str(exc)
+    else:
+        raise AssertionError("Importer accepted negative rainfall")
