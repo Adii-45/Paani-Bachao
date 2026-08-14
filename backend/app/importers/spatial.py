@@ -56,13 +56,15 @@ def _validate_ring(ring: Any) -> list[list[float]]:
         positions.append([longitude, latitude])
     if positions[0] != positions[-1]:
         raise ValueError("A polygon ring must be closed.")
+    return positions
+
+
+def _ring_has_area(ring: list[list[float]]) -> bool:
     twice_area = sum(
         start[0] * end[1] - end[0] * start[1]
-        for start, end in zip(positions, positions[1:])
+        for start, end in zip(ring, ring[1:])
     )
-    if abs(twice_area) <= 1e-12:
-        raise ValueError("A polygon ring must enclose a non-zero area.")
-    return positions
+    return abs(twice_area) > 1e-12
 
 
 def validated_polygon_geometry(
@@ -80,13 +82,19 @@ def validated_polygon_geometry(
 
     normalized_polygons: list[list[list[list[float]]]] = []
     points: list[list[float]] = []
+    has_nonzero_polygon = False
     for polygon in polygons:
         if not isinstance(polygon, list) or not polygon:
             raise ValueError("A polygon contains no rings.")
         normalized_rings = [_validate_ring(ring) for ring in polygon]
+        has_nonzero_polygon = has_nonzero_polygon or _ring_has_area(
+            normalized_rings[0]
+        )
         normalized_polygons.append(normalized_rings)
         for ring in normalized_rings:
             points.extend(ring)
+    if not has_nonzero_polygon:
+        raise ValueError("Polygon geometry must contain a non-zero exterior area.")
     normalized_coordinates: Any = (
         normalized_polygons[0]
         if geometry["type"] == "Polygon"

@@ -136,14 +136,40 @@ observation.
 
 ## Cache validation
 
-After obtaining and reviewing an official export, validate normalized records before replacing a runtime cache:
+Inspect all configured environmental caches before running assessments:
 
 ```bash
 cd backend
-.venv/bin/python scripts/validate_environmental_cache.py groundwater app/data/normalized/cgwb_groundwater_observations.json
+.venv/bin/python -m scripts.validate_environmental_cache --all
 ```
 
-Use `soil` or `hydrogeology` for the corresponding schema. Validation checks field types, units/ranges and source-registry identifiers. It does not establish that an upstream file is authoritative; the operator must verify and record the official source, version, layer and feature identifier.
+The command exits unsuccessfully when any configured dataset is not usable. Use
+`--json` for a machine-readable report. A single reviewed candidate cache can be
+checked without exposing its path in the report:
+
+```bash
+.venv/bin/python -m scripts.validate_environmental_cache groundwater path/to/cache.json
+```
+
+Each report distinguishes `AVAILABLE`, `STALE`, `EMPTY`, `MISSING`, `MALFORMED`,
+`PARTIAL` and `UNSUPPORTED_METADATA`. It includes valid/invalid record counts,
+provider status, source IDs, dataset version, import timestamp, observation period,
+latest groundwater observation, determinable coverage, and populated component
+counts.
+
+Freshness semantics are centralized in
+`app/services/environmental_validation.py`. By default, the checker respects the
+reviewed dataset status instead of inventing a universal age limit: long-period
+rainfall normals and static regional maps do not need daily refreshes, while dated
+groundwater observations expose their latest observation date. A deployment may
+provide explicit positive maximum ages through `EnvironmentalFreshnessConfig` after
+those limits have been approved.
+
+Validation checks field types, units/ranges, polygon geometry/bounds and registered
+source provenance. Runtime repositories apply the same provider-ready spatial checks,
+so a malformed mixed cache is rejected as a whole instead of silently using a valid
+subset. Validation does not establish that an upstream file is authoritative; the
+operator must still verify the official source, version, layer and feature identifier.
 
 ## AR-engine boundary
 

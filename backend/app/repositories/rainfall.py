@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from ..domain.environment import RainfallRecord
+from ..importers.spatial import validated_polygon_geometry
 
 
 def _point_on_segment(
@@ -70,7 +71,23 @@ class NormalizedRainfallRepository:
             return json.load(source)
 
     def records(self, dataset: dict[str, Any]) -> list[RainfallRecord]:
-        return [RainfallRecord.model_validate(item) for item in dataset.get("records", [])]
+        records = [
+            RainfallRecord.model_validate(item) for item in dataset.get("records", [])
+        ]
+        for record in records:
+            if record.geometry is None or record.bounding_box is None:
+                raise ValueError(
+                    "Rainfall cache records require polygon geometry and a bounding box."
+                )
+            _, calculated_box = validated_polygon_geometry(record.geometry)
+            if any(
+                abs(expected - actual) > 1e-8
+                for expected, actual in zip(
+                    record.bounding_box, calculated_box, strict=True
+                )
+            ):
+                raise ValueError("Rainfall bounding box does not match geometry.")
+        return records
 
     def find_at_coordinates(
         self,

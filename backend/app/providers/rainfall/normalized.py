@@ -33,6 +33,11 @@ class NormalizedImdRainfallProvider:
     def lookup(self, location: NormalizedLocation) -> RainfallLookup:
         try:
             dataset = self.repository.load()
+            records = [
+                record
+                for record in self.repository.records(dataset)
+                if record.statistic_type == "LONG_PERIOD_NORMAL_ANNUAL"
+            ]
         except (FileNotFoundError, OSError, ValueError):
             return RainfallLookup(
                 status=DataStatus.DATA_UNAVAILABLE,
@@ -55,11 +60,6 @@ class NormalizedImdRainfallProvider:
         else:
             result_status = DataStatus.DATA_AVAILABLE
 
-        records = [
-            record
-            for record in self.repository.records(dataset)
-            if record.statistic_type == "LONG_PERIOD_NORMAL_ANNUAL"
-        ]
         matches = self.repository.find_at_coordinates(
             records,
             latitude=location.latitude,
@@ -106,7 +106,11 @@ class NormalizedImdRainfallProvider:
 
         record = matches[0]
         if record.source_id not in source_registry():
-            raise RuntimeError(f"Rainfall record uses unknown source ID: {record.source_id}")
+            return RainfallLookup(
+                status=DataStatus.DATA_UNAVAILABLE,
+                error_code="RAINFALL_DATA_UNAVAILABLE",
+                message="RainfallDataUnavailable: cache provenance is not registered.",
+            )
         message = (
             "Official rainfall record is available."
             if result_status is DataStatus.DATA_AVAILABLE
