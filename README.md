@@ -110,6 +110,14 @@ Other optional API fields support coordinate/administrative disambiguation (`lat
 `groundwaterObservationMethod`, `groundwaterSource`). The application never inserts
 values into these fields or presents an application-supplied value as user input.
 
+Environmental evidence for artificial recharge is resolved independently after
+location normalization. The bundled groundwater cache contains one stale CGWB
+Bengaluru Urban monitoring observation for exercising the source-traceable flow;
+it is labelled as a nearby observation, not a property measurement. Soil,
+infiltration, geology, geomorphology and aquifer fields remain explicitly unavailable
+until reviewed official features are imported. See
+`docs/engineering/environmental-data.md` for sources, cache refresh and limitations.
+
 ## Scope
 
 This build intentionally has no authentication, profiles, inferred household-demand

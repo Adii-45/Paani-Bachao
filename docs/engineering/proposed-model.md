@@ -24,8 +24,8 @@ gross rainfall volume and harvestable rooftop runoff
         |         => capacity or an explicit unavailable state
         |
         +----> water-allocation balance
-                  storage/use + documented losses + overflow allocation missing
-                  => recharge quantity unavailable
+                  finite-tank supplied water + ending storage + overflow
+                  => overflow potentially available for recharge
                            |
 groundwater observation + infiltration + hydrogeology + quality/site constraints
                            |
@@ -33,8 +33,8 @@ groundwater observation + infiltration + hydrogeology + quality/site constraints
                    recharge feasibility criteria
                            |
                            v
-              structure selection and per-structure sizing
-              only when all source-required inputs are present
+              location-specific structure selection and sizing
+              (currently CGWB NCT Delhi standard designs only)
 ```
 
 ## Rooftop harvesting

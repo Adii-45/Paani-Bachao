@@ -2,9 +2,10 @@ from datetime import date
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .domain.environment import RainfallErrorCode
+from .domain.ar_environment import AREnvironmentalProfile
 from .domain.location import LocationResolutionStatus
 from .provenance.models import DataStatus, PublishedRange, SourceCitation, ValueProvenance
 
@@ -26,6 +27,12 @@ class SoilType(str, Enum):
     DONT_KNOW = "DONT_KNOW"
 
 
+class WaterQualityReviewStatus(str, Enum):
+    NOT_VERIFIED = "NOT_VERIFIED"
+    VERIFIED_ACCEPTABLE = "VERIFIED_ACCEPTABLE"
+    UNSUITABLE = "UNSUITABLE"
+
+
 class AssessmentRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -44,6 +51,9 @@ class AssessmentRequest(BaseModel):
     groundwaterObservationSeason: str | None = Field(default=None, max_length=80)
     groundwaterObservationMethod: str | None = Field(default=None, max_length=160)
     groundwaterSource: str | None = Field(default=None, max_length=160)
+    buildingHasBasement: bool | None = None
+    waterQualityStatus: WaterQualityReviewStatus = WaterQualityReviewStatus.NOT_VERIFIED
+    waterQualityEvidence: str | None = Field(default=None, max_length=300)
 
     @field_validator("location")
     @classmethod
@@ -51,6 +61,18 @@ class AssessmentRequest(BaseModel):
         if not any(character.isalnum() for character in value):
             raise ValueError("Location must contain letters or numbers.")
         return value
+
+    @model_validator(mode="after")
+    def reviewed_water_quality_requires_evidence(self) -> "AssessmentRequest":
+        if (
+            self.waterQualityStatus is not WaterQualityReviewStatus.NOT_VERIFIED
+            and not self.waterQualityEvidence
+        ):
+            raise ValueError(
+                "A laboratory report, qualified review or source reference is required "
+                "for a water-quality conclusion."
+            )
+        return self
 
 
 class DerivedData(BaseModel):
@@ -154,15 +176,34 @@ class ArtificialRechargeResult(BaseModel):
     criteria: list["FeasibilityCriterionResponse"]
     reasons: list[str]
     quantityStatus: str
+    quantityMethodId: str
+    annualHarvestLitres: float | None
+    annualDemandSuppliedLitres: float | None
+    annualOverflowLitres: float | None
+    catchmentLossesLitres: float | None
+    endingStorageLitres: float | None
+    quantityAssumptions: list[str]
     quantityMissingInputs: list[str]
+    conditionsPassed: list[str]
+    conditionsFailed: list[str]
+    conditionsRequiringVerification: list[str]
+    missingData: list[str]
+    fieldTestsRecommended: list[str]
     structureSelectionStatus: str
     alternativeStructures: list[str]
     selectionReasons: list[str]
     rejectedStructures: list["RejectedStructureResponse"]
     structureMissingInputs: list[str]
     sizingStatus: str
+    sizingMethodId: str
+    requiredFootprintM2: float | None
+    filterMedia: list[str]
+    sizingDesignInputs: dict[str, Any]
+    sizingAssumptions: list[str]
+    fieldVerificationRequired: list[str]
     sizingMissingInputs: list[str]
     sourceIds: list[str]
+    environmentalProfile: AREnvironmentalProfile | None = None
 
 
 class FeasibilityCriterionResponse(BaseModel):

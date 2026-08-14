@@ -1,0 +1,13 @@
+{
+  "datasetStatus": "DATA_UNAVAILABLE",
+  "datasetVersion": null,
+  "importedAt": null,
+  "refreshStrategy": "Periodically import reviewed NWIC/GSI aquifer polygons and documented Bhuvan/CGWB geology or geomorphology layers, preserving each feature identifier and source version.",
+  "sourceServices": [
+    "https://gis.nwic.in/server/rest/services/NWIC/AquiferSystems_GSI/FeatureServer",
+    "https://gis.nwic.in/server/rest/services/SubInfoSysLCC/AquiferLitholog_NWIC/MapServer",
+    "https://bhuvan-vec2.nrsc.gov.in/bhuvan/wms"
+  ],
+  "notes": "Service/layer metadata are not site attributes. No geology, geomorphology, groundwater prospect, aquifer depth or aquifer thickness is inferred without an imported intersecting feature.",
+  "records": []
+}

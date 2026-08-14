@@ -1,25 +1,28 @@
 from typing import Protocol
 
-from ..domain.environment import LocationQuery
-from ..provenance.models import DataStatus
-
-
-class EnvironmentalLookup(Protocol):
-    status: DataStatus
-    message: str
+from ..domain.ar_environment import (
+    GroundwaterLookup,
+    HydrogeologyLookup,
+    SoilLookup,
+)
+from ..domain.location import NormalizedLocation
 
 
 class GroundwaterProvider(Protocol):
-    def lookup(self, location: LocationQuery) -> EnvironmentalLookup: ...
+    def lookup(self, location: NormalizedLocation) -> GroundwaterLookup: ...
 
 
 class GeologyProvider(Protocol):
-    def lookup(self, location: LocationQuery) -> EnvironmentalLookup: ...
+    def lookup(self, location: NormalizedLocation) -> HydrogeologyLookup: ...
 
 
 class GeomorphologyProvider(Protocol):
-    def lookup(self, location: LocationQuery) -> EnvironmentalLookup: ...
+    def lookup(self, location: NormalizedLocation) -> HydrogeologyLookup: ...
 
 
 class SoilProvider(Protocol):
-    def lookup(self, location: LocationQuery) -> EnvironmentalLookup: ...
+    def lookup(self, location: NormalizedLocation) -> SoilLookup: ...
+
+
+class HydrogeologyProvider(Protocol):
+    def lookup(self, location: NormalizedLocation) -> HydrogeologyLookup: ...

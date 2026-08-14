@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -6,8 +6,19 @@ from app.domain.environment import (
     LocationQuery,
     RainfallLookup,
     RainfallRecord,
+    MonthlyRainfallNormal,
     RunoffCoefficientLookup,
     RunoffCoefficientRecord,
+)
+from app.domain.ar_environment import (
+    EnvironmentalResolution,
+    GroundwaterLookup,
+    GroundwaterObservation,
+    HydrogeologyInformation,
+    HydrogeologyLookup,
+    InfiltrationDataType,
+    SoilInformation,
+    SoilLookup,
 )
 from app.domain.location import (
     LocationResolution,
@@ -49,6 +60,129 @@ class UnresolvedResolver:
         return LocationResolution(
             status=LocationResolutionStatus.NOT_RESOLVED,
             message="LocationNotResolved: deterministic test fixture.",
+        )
+
+
+class DelhiResolver:
+    def resolve(self, _query: LocationQuery) -> LocationResolution:
+        return LocationResolution(
+            status=LocationResolutionStatus.RESOLVED,
+            location=NormalizedLocation(
+                input="Delhi",
+                canonicalName="Delhi, India",
+                latitude=28.6139,
+                longitude=77.209,
+                district="New Delhi",
+                state="Delhi",
+                country="India",
+                provider="test fixture",
+                providerPlaceId="fixture-delhi",
+                confidence="fixture",
+            ),
+            message="Resolved by deterministic test fixture.",
+        )
+
+
+TEST_PROVENANCE = ValueProvenance(
+    quality=DataQuality.AUTHORITATIVE_DATASET,
+    sourceIds=["CGWB_DELHI_STANDARD_DESIGNS"],
+    sourceRecord="deterministic integration fixture",
+)
+
+
+class DelhiGroundwaterProvider:
+    def lookup(self, _location: NormalizedLocation) -> GroundwaterLookup:
+        return GroundwaterLookup(
+            status=DataStatus.DATA_AVAILABLE,
+            observation=GroundwaterObservation(
+                stationId="fixture-well",
+                stationName="Fixture observation",
+                depthBelowGroundLevelM=10,
+                observationDate=date(2025, 11, 15),
+                season="POST_MONSOON",
+                latitude=28.6139,
+                longitude=77.209,
+                district="New Delhi",
+                state="Delhi",
+                spatialResolution=EnvironmentalResolution.NEARBY_OBSERVATION,
+                provenance=TEST_PROVENANCE,
+            ),
+            message="Deterministic nearby observation fixture.",
+            recordCount=1,
+        )
+
+
+class DelhiSoilProvider:
+    def lookup(self, _location: NormalizedLocation) -> SoilLookup:
+        return SoilLookup(
+            status=DataStatus.DATA_AVAILABLE,
+            information=SoilInformation(
+                recordId="fixture-soil",
+                soilClass="field tested",
+                measuredInfiltrationRateMmPerHr=10,
+                infiltrationDataType=InfiltrationDataType.PROPERTY_MEASURED,
+                spatialResolution=EnvironmentalResolution.PROPERTY_MEASURED,
+                fieldTestRecommended=False,
+                provenance=TEST_PROVENANCE,
+            ),
+            message="Deterministic property measurement fixture.",
+        )
+
+
+class DelhiHydrogeologyProvider:
+    def lookup(self, _location: NormalizedLocation) -> HydrogeologyLookup:
+        return HydrogeologyLookup(
+            status=DataStatus.DATA_AVAILABLE,
+            information=HydrogeologyInformation(
+                recordId="fixture-hydrogeology",
+                geology="Quaternary alluvial formation",
+                lithology="alluvium",
+                geomorphology="alluvial plain",
+                groundwaterProspect="reviewed",
+                aquiferType="unconfined alluvial aquifer",
+                spatialResolution=EnvironmentalResolution.REGIONAL_LAYER,
+                datasetVersion="deterministic fixture",
+                provenance=TEST_PROVENANCE,
+            ),
+            geologyStatus=DataStatus.DATA_AVAILABLE,
+            geomorphologyStatus=DataStatus.DATA_AVAILABLE,
+            aquiferStatus=DataStatus.DATA_AVAILABLE,
+            groundwaterProspectStatus=DataStatus.DATA_AVAILABLE,
+            message="Deterministic intersecting hydrogeology fixture.",
+        )
+
+
+class DelhiRainfallProvider:
+    def lookup(self, _location: NormalizedLocation) -> RainfallLookup:
+        month_values = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0)
+        return RainfallLookup(
+            status=DataStatus.DATA_AVAILABLE,
+            record=RainfallRecord(
+                recordId="fixture-rainfall",
+                locationName="New Delhi",
+                rainfallMm=100,
+                statisticType="DETERMINISTIC_TEST_SERIES",
+                referencePeriod="test fixture",
+                spatialResolution="deterministic test fixture",
+                sourceId="IMD_DISTRICT_ANNUAL_NORMALS_1971_2020",
+                sourceName="India Meteorological Department (test-shaped fixture)",
+                sourceUrl="https://www.imdpune.gov.in/climinfo/season/ann/index.html",
+                sourceRecord="deterministic fixture; not a production rainfall record",
+                datasetVersion="test fixture",
+                retrievedAt=datetime(2026, 8, 13, tzinfo=UTC),
+                monthlyNormal=MonthlyRainfallNormal(
+                    valuesMm=month_values,
+                    referencePeriod="test fixture",
+                    spatialResolution="deterministic test fixture",
+                    sourceId="IMD_DISTRICT_MONTHLY_NORMALS_1971_2020",
+                    sourceName="India Meteorological Department (test-shaped fixture)",
+                    sourceUrls=tuple("https://www.imdpune.gov.in" for _ in range(12)),
+                    sourceRecords=tuple(f"fixture-{month}" for month in range(1, 13)),
+                    datasetVersion="test fixture",
+                    retrievedAt=datetime(2026, 8, 13, tzinfo=UTC),
+                ),
+            ),
+            message="Deterministic rainfall fixture.",
         )
 
 
@@ -186,7 +320,7 @@ def test_groundwater_metadata_is_preserved_but_does_not_hide_other_gaps() -> Non
         for item in result.artificialRecharge.criteria
         if item.criterion == "groundwater_observation"
     )
-    assert criterion.result == "DATA_AVAILABLE"
+    assert criterion.result == "REQUIRES_VERIFICATION"
     assert result.artificialRecharge.feasibilityStatus == "INSUFFICIENT_DATA"
     assert result.artificialRecharge.recommendedStructure is None
 
@@ -258,3 +392,40 @@ def test_rainfall_lookup_is_not_called_when_location_resolution_fails() -> None:
 
     assert result.derived.rainfallStatus is DataStatus.DATA_UNAVAILABLE
     assert result.rtrwh.potentialLitresPerYear is None
+
+
+def test_full_phase_one_flow_reaches_source_backed_ar_design() -> None:
+    result = create_assessment(
+        request(
+            location="Delhi",
+            roofAreaM2=100,
+            roofMaterial="RCC",
+            groundwaterDepthM=10,
+            availableGroundAreaM2=10,
+            monthlyRainwaterDemandLitres=1_000,
+            buildingHasBasement=False,
+            waterQualityStatus="VERIFIED_ACCEPTABLE",
+            waterQualityEvidence="Deterministic qualified-review fixture",
+        ),
+        location_resolver=DelhiResolver(),
+        rainfall_provider=DelhiRainfallProvider(),
+        groundwater_provider=DelhiGroundwaterProvider(),
+        soil_provider=DelhiSoilProvider(),
+        hydrogeology_provider=DelhiHydrogeologyProvider(),
+    )
+
+    assert result.rtrwh.potentialLitresPerYear == 7_000
+    assert result.rtrwh.estimatedOverflowLitres == 1_000
+    assert result.artificialRecharge.potentialRechargeLitresPerYear == 1_000
+    assert result.artificialRecharge.feasibilityStatus == "ELIGIBLE"
+    assert result.artificialRecharge.recommendedStructure is not None
+    assert result.artificialRecharge.recommendedStructure.type == "RECHARGE_TRENCH"
+    assert result.artificialRecharge.dimensions == {
+        "lengthM": 1.2,
+        "widthM": 1.2,
+        "depthM": 1.4,
+    }
+    assert result.artificialRecharge.sizingStatus == "INDICATIVE_DESIGN_AVAILABLE"
+    assert result.artificialRecharge.fieldVerificationRequired
+    assert result.dataCompleteness == "GOOD"
+    assert "CGWB_DELHI_STANDARD_DESIGNS" in result.artificialRecharge.sourceIds

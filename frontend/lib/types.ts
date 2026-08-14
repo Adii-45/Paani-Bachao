@@ -6,6 +6,9 @@ export type AssessmentInput = {
   groundwaterDepthM: number;
   availableGroundAreaM2: number;
   monthlyRainwaterDemandLitres?: number;
+  buildingHasBasement?: boolean;
+  waterQualityStatus?: "NOT_VERIFIED" | "VERIFIED_ACCEPTABLE" | "UNSUITABLE";
+  waterQualityEvidence?: string;
 };
 
 export type AssessmentResult = {
@@ -83,9 +86,85 @@ export type AssessmentResult = {
     }>;
     reasons?: string[];
     quantityStatus?: string;
+    quantityMethodId?: string;
+    annualHarvestLitres?: number | null;
+    annualDemandSuppliedLitres?: number | null;
+    annualOverflowLitres?: number | null;
+    catchmentLossesLitres?: number | null;
+    endingStorageLitres?: number | null;
+    quantityAssumptions?: string[];
+    conditionsPassed?: string[];
+    conditionsFailed?: string[];
+    conditionsRequiringVerification?: string[];
+    missingData?: string[];
+    fieldTestsRecommended?: string[];
     structureSelectionStatus?: string;
+    alternativeStructures?: string[];
+    selectionReasons?: string[];
+    rejectedStructures?: Array<{
+      structure: string;
+      reason: string;
+      sourceIds: string[];
+    }>;
     structureMissingInputs?: string[];
     sizingStatus?: string;
+    sizingMethodId?: string;
+    requiredFootprintM2?: number | null;
+    filterMedia?: string[];
+    sizingDesignInputs?: Record<string, string | number>;
+    sizingAssumptions?: string[];
+    fieldVerificationRequired?: string[];
+    sizingMissingInputs?: string[];
+    environmentalProfile?: {
+      assembledAt: string;
+      location: {
+        canonicalName: string;
+        latitude: number;
+        longitude: number;
+        district: string | null;
+        state: string | null;
+      };
+      groundwater: {
+        status: string;
+        message: string;
+        recordCount: number;
+        observation: {
+          stationId: string;
+          stationName: string;
+          depthBelowGroundLevelM: number;
+          observationDate: string;
+          season: string;
+          distanceFromPropertyM: number | null;
+          spatialResolution: string;
+        } | null;
+      };
+      soil: {
+        status: string;
+        message: string;
+        information: {
+          soilClass: string | null;
+          soilTexture: string | null;
+          measuredInfiltrationRateMmPerHr: number | null;
+          infiltrationDataType: string;
+          fieldTestRecommended: boolean;
+        } | null;
+      };
+      hydrogeology: {
+        status: string;
+        geologyStatus: string;
+        geomorphologyStatus: string;
+        aquiferStatus: string;
+        groundwaterProspectStatus: string;
+        message: string;
+        information: {
+          geology: string | null;
+          lithology: string | null;
+          geomorphology: string | null;
+          groundwaterProspect: string | null;
+          aquiferType: string | null;
+        } | null;
+      };
+    } | null;
   };
   rtrwhSuitability: string;
   dataCompleteness: string;

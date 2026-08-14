@@ -1,0 +1,50 @@
+{
+  "methodId": "CGWB_DELHI_STANDARD_RTRWH_DESIGNS",
+  "sourceId": "CGWB_DELHI_STANDARD_DESIGNS",
+  "applicability": {
+    "region": "National Capital Territory of Delhi",
+    "trenchWithoutWell": {
+      "formations": ["ALLUVIAL"],
+      "minimumGroundwaterDepthMExclusive": 5,
+      "maximumGroundwaterDepthMInclusive": 15,
+      "basementAllowed": false
+    },
+    "trenchWithRechargeWell": {
+      "formations": ["ALLUVIAL", "HARD_ROCK"],
+      "minimumGroundwaterDepthMExclusive": 15,
+      "basementAllowed": true
+    }
+  },
+  "publishedDesignBasis": {
+    "highestRainfallIntensityMPerHour": 0.025,
+    "runoffCoefficient": 0.8,
+    "normalMonsoonRainfallM": 0.54,
+    "notes": "These are the published Delhi table's design inputs, not defaults applied to the RTRWH annual-harvest calculation."
+  },
+  "trenchWithoutWell": [
+    {"maximumRoofAreaM2": 100, "lengthM": 1.2, "widthM": 1.2, "depthM": 1.4},
+    {"maximumRoofAreaM2": 200, "lengthM": 1.8, "widthM": 1.5, "depthM": 1.5},
+    {"maximumRoofAreaM2": 300, "lengthM": 2.4, "widthM": 1.8, "depthM": 1.4},
+    {"maximumRoofAreaM2": 400, "lengthM": 2.7, "widthM": 2.1, "depthM": 1.4},
+    {"maximumRoofAreaM2": 500, "lengthM": 3.3, "widthM": 2.1, "depthM": 1.5}
+  ],
+  "trenchWithRechargeWell": [
+    {"maximumRoofAreaM2": 100, "lengthM": 1.0, "widthM": 0.5, "depthM": 0.5},
+    {"maximumRoofAreaM2": 200, "lengthM": 1.0, "widthM": 1.0, "depthM": 1.0},
+    {"maximumRoofAreaM2": 300, "lengthM": 1.0, "widthM": 1.0, "depthM": 1.0},
+    {"maximumRoofAreaM2": 400, "lengthM": 1.0, "widthM": 1.0, "depthM": 1.0},
+    {"maximumRoofAreaM2": 500, "lengthM": 2.0, "widthM": 1.5, "depthM": 1.0}
+  ],
+  "filterMedia": [
+    "0.4 m bottom layer of boulders (5-20 cm)",
+    "0.3 m middle layer of gravel (5-10 cm)",
+    "0.3 m top layer of coarse sand (1.5-2.0 mm)",
+    "0.1 m layer of pea gravel over the coarse sand"
+  ],
+  "operationAndVerification": [
+    "Use rooftop water only and provide mesh and first-shower bypass.",
+    "Operate during monsoon to reduce contamination risk.",
+    "Final design depends on site conditions and applicable permissions.",
+    "Recharge-well slotted pipe must align with a confirmed granular or fractured zone."
+  ]
+}

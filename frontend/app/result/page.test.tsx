@@ -83,6 +83,44 @@ const sourceBackedResult: AssessmentResult = {
     quantityStatus: "INSUFFICIENT_DATA",
     structureSelectionStatus: "INSUFFICIENT_DATA_FOR_SELECTION",
     sizingStatus: "INSUFFICIENT_DATA_FOR_SIZING",
+    environmentalProfile: {
+      assembledAt: "2026-08-13T00:00:00Z",
+      location: {
+        canonicalName: "Example District, Example State, India",
+        latitude: 12.5,
+        longitude: 77.5,
+        district: "Example District",
+        state: "Example State",
+      },
+      groundwater: {
+        status: "DATA_STALE",
+        message: "Nearby CGWB observation; not a property measurement.",
+        recordCount: 1,
+        observation: {
+          stationId: "W125200077350001",
+          stationName: "Jayanagar",
+          depthBelowGroundLevelM: 3,
+          observationDate: "2022-11-05",
+          season: "NOVEMBER_MONITORING",
+          distanceFromPropertyM: 11407.7,
+          spatialResolution: "NEARBY_OBSERVATION",
+        },
+      },
+      soil: {
+        status: "FIELD_MEASUREMENT_REQUIRED",
+        message: "A field infiltration/percolation test is required.",
+        information: null,
+      },
+      hydrogeology: {
+        status: "DATA_UNAVAILABLE",
+        geologyStatus: "DATA_UNAVAILABLE",
+        geomorphologyStatus: "DATA_UNAVAILABLE",
+        aquiferStatus: "DATA_UNAVAILABLE",
+        groundwaterProspectStatus: "DATA_UNAVAILABLE",
+        message: "No reviewed hydrogeology feature is available.",
+        information: null,
+      },
+    },
   },
   rtrwhSuitability: "SUITABILITY_NOT_DETERMINED",
   dataCompleteness: "INSUFFICIENT",
@@ -141,6 +179,9 @@ describe("assessment results", () => {
     );
     expect(screen.getAllByText("Insufficient data").length).toBeGreaterThan(0);
     expect(screen.getByText(/No applicable CGWB\/NAQUIM feature/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Environmental Evidence" })).toBeInTheDocument();
+    expect(screen.getByText("3 m bgl at Jayanagar")).toBeInTheDocument();
+    expect(screen.getByText(/field infiltration\/percolation test/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Manual on Artificial Recharge/ })).toHaveAttribute(
       "href",
       "https://cgwb.gov.in/example.pdf",
@@ -183,6 +224,44 @@ describe("assessment results", () => {
     expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(3);
     expect(screen.queryByText("15,000")).not.toBeInTheDocument();
     expect(screen.queryByText("6,000")).not.toBeInTheDocument();
+  });
+
+  it("renders recharge balance, structure reasoning, dimensions, and field checks", () => {
+    const rechargeResult: AssessmentResult = {
+      ...sourceBackedResult,
+      inputs: {
+        ...sourceBackedResult.inputs,
+        buildingHasBasement: false,
+        waterQualityStatus: "VERIFIED_ACCEPTABLE",
+        waterQualityEvidence: "Qualified laboratory report fixture",
+      },
+      artificialRecharge: {
+        ...sourceBackedResult.artificialRecharge,
+        potentialRechargeLitresPerYear: 1_000,
+        annualDemandSuppliedLitres: 10_000,
+        annualOverflowLitres: 1_000,
+        endingStorageLitres: 4_000,
+        quantityMethodId: "IRICEN_STORAGE_OVERFLOW_AVAILABLE_FOR_AR",
+        feasibilityStatus: "ELIGIBLE",
+        recommendedStructure: { type: "RECHARGE_TRENCH", displayName: "Recharge Trench" },
+        dimensions: { lengthM: 1.2, widthM: 1.2, depthM: 1.4 },
+        selectionReasons: ["Reviewed formation is alluvial."],
+        rejectedStructures: [
+          { structure: "TRENCH_WITH_RECHARGE_WELL", reason: "Depth condition not met.", sourceIds: ["CGWB_DELHI_STANDARD_DESIGNS"] },
+        ],
+        filterMedia: ["0.4 m bottom layer of boulders"],
+        fieldVerificationRequired: ["Complete a property-level infiltration test."],
+      },
+    };
+    sessionValue.mockReturnValue(JSON.stringify(rechargeResult));
+    render(<ResultPage />);
+
+    expect(screen.getAllByText("1,000 L/year").length).toBeGreaterThan(0);
+    expect(screen.getByText("Recharge Trench")).toBeInTheDocument();
+    expect(screen.getByText("1.2 m × 1.2 m × 1.4 m")).toBeInTheDocument();
+    expect(screen.getByText("Reviewed formation is alluvial.")).toBeInTheDocument();
+    expect(screen.getByText("Field verification required")).toBeInTheDocument();
+    expect(screen.getByText(/overflow is water available for routing/i)).toBeInTheDocument();
   });
 
   it("offers the assessment route when no stored result exists", () => {

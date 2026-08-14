@@ -1,0 +1,33 @@
+{
+  "datasetStatus": "DATA_STALE",
+  "datasetVersion": "CGWB November 2022 water level joined to CGWB 2020 station coordinates",
+  "importedAt": "2026-08-13T00:00:00Z",
+  "refreshStrategy": "Replace with the latest reviewed CGWB/India-WRIS seasonal water-level export and official station coordinates; refresh after each published seasonal compilation.",
+  "notes": "This cache contains one fully cross-checkable Bengaluru Urban record. The water level and coordinates come from separate official CGWB publications sharing the same station ID. Coordinates are rounded as published and the observation is not a property measurement.",
+  "records": [
+    {
+      "stationId": "W125200077350001",
+      "stationName": "Jayanagar",
+      "stationType": "Bore Well / Piezometer",
+      "aquiferNature": "Semi-Confined",
+      "depthBelowGroundLevelM": 3.0,
+      "observationDate": "2022-11-05",
+      "season": "NOVEMBER_MONITORING",
+      "latitude": 12.87,
+      "longitude": 77.58,
+      "district": "Bangalore Urban",
+      "state": "Karnataka",
+      "spatialResolution": "NEARBY_OBSERVATION",
+      "provenance": {
+        "quality": "AUTHORITATIVE_DATASET",
+        "sourceIds": ["CGWB_GWL_NOVEMBER_2022", "CGWB_WQ_2020_STATION_COORDINATES"],
+        "sourceRecord": "Station W125200077350001, Jayanagar; 05-Nov-2022 depth and 2020 station-coordinate row 2767",
+        "sourceDateOrVersion": "November 2022 water level; 2020 station coordinates",
+        "spatialResolution": "CGWB monitoring-well point; published coordinates rounded to 0.01 degree",
+        "temporalResolution": "single seasonal observation",
+        "retrievedAt": "2026-08-13T00:00:00Z",
+        "notes": "The 3.0 m bgl depth is a station measurement, not the property's exact groundwater level."
+      }
+    }
+  ]
+}

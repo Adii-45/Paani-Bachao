@@ -61,6 +61,8 @@ describe("property assessment form", () => {
     expect(screen.getByLabelText(/Roof Area/)).toHaveAttribute("min", "0.1");
     expect(screen.getByLabelText(/Groundwater Depth/)).toHaveAttribute("min", "0");
     expect(screen.getByLabelText(/Planned Monthly Rainwater Use/)).not.toBeRequired();
+    expect(screen.getByLabelText(/Building Basement/)).not.toBeRequired();
+    expect(screen.getByLabelText(/Recharge Water Quality Review/)).toHaveValue("NOT_VERIFIED");
   });
 
   it("sends optional planned monthly use when the user requests tank sizing", async () => {
@@ -124,6 +126,7 @@ describe("property assessment form", () => {
         soilType: "SANDY_LOAM",
         groundwaterDepthM: 8,
         availableGroundAreaM2: 15,
+        waterQualityStatus: "NOT_VERIFIED",
       }),
     });
 
@@ -142,6 +145,7 @@ describe("property assessment form", () => {
       soilType: "SANDY_LOAM",
       groundwaterDepthM: 8,
       availableGroundAreaM2: 15,
+      waterQualityStatus: "NOT_VERIFIED",
     });
     expect(JSON.parse(sessionStorage.getItem("rainassess-result") ?? "null")).toEqual(
       successfulResult,

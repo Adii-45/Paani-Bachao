@@ -76,4 +76,4 @@ This audit is the evidence gate for replacing the demo assessment engine. `KEEP`
 
 ## Audit decision
 
-The demo rules are not suitable as a default or fallback and are removed. The replacement engine may calculate annual rooftop harvest only when both an official rainfall record and a matching Table 7.2 roof coefficient are available. Storage sizing, recharge feasibility, rechargeable quantity, structure selection and dimensions must return explicit insufficient-data or unsupported states until their source-specific required inputs are present.
+The demo rules are not suitable as a default or fallback and are removed. The replacement engine calculates annual rooftop harvest only when both an official rainfall record and a matching Table 7.2 roof coefficient are available. Storage overflow can become recharge-available water only through the completed water balance. Feasibility, structure selection and sizing return explicit insufficient-data or unsupported states until their source-specific inputs are present; the only installed structure design strategy is the reviewed CGWB NCT Delhi standard.

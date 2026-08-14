@@ -23,6 +23,28 @@
       "notes": "Planning, investigation and design context. No universal residential threshold is encoded from this source without an exact applicable clause."
     },
     {
+      "source_id": "CGWB_DELHI_STANDARD_DESIGNS",
+      "authority": "Central Ground Water Board (CGWB), State Unit Office New Delhi",
+      "document_title": "Standard Designs for Adoption of Roof Top Rainwater Harvesting in Delhi",
+      "document_version_or_year": "Publication available from CGWB",
+      "section": "Technical design A and B; applicability notes and drawings",
+      "page": "3–15",
+      "source_url": "https://cgwb.gov.in/cgwbpnm/download/370",
+      "accessed_at": "2026-08-13",
+      "notes": "Location-specific CGWB standard designs. Encoded only for NCT Delhi: trench without recharge well for alluvial formation, groundwater >5 m and <=15 m bgl, and no basement; trench with recharge well for alluvial/hard-rock formation and groundwater >15 m bgl. Published roof-area tables cover up to 500 m2. The document states designs are indicative and depend on site conditions."
+    },
+    {
+      "source_id": "CGWB_AR_FAQ_2025",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "Frequently Asked Questions on Artificial Recharge and Rainwater Harvesting",
+      "document_version_or_year": "February 2025",
+      "section": "Design and maintenance considerations",
+      "page": "36",
+      "source_url": "https://cgwb.gov.in/sites/default/files/2025-02/faq_artificialrecharge_final_forwebsite_english.pdf",
+      "accessed_at": "2026-08-13",
+      "notes": "States artificial recharge structures are not recommended where post-monsoon groundwater levels are shallower than 3 m bgl and identifies contamination-prevention and field/site design considerations."
+    },
+    {
       "source_id": "CGWB_MASTER_PLAN_AR_2020",
       "authority": "Central Ground Water Board (CGWB)",
       "document_title": "Master Plan for Artificial Recharge to Groundwater in India",
@@ -153,6 +175,61 @@
       "source_url": "https://bhuvan.nrsc.gov.in/wiki/index.php/How_to_use_WMS_services",
       "accessed_at": "2026-08-13",
       "notes": "Only documented OGC/download services may be integrated. Interactive pages are not scraped, and restricted groundwater-prospect attributes are not assumed available."
+    },
+    {
+      "source_id": "CGWB_GWL_NOVEMBER_2022",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "November ground water level data 1994-2023 (2022 station records)",
+      "document_version_or_year": "November 2022",
+      "section": "Karnataka monitoring-station records",
+      "page": null,
+      "source_url": "https://cgwb.gov.in/old_website/documents/Water%20Level/WL_Nov2022_WRIS.pdf",
+      "accessed_at": "2026-08-13",
+      "notes": "Official CGWB seasonal depth-to-water-level observations in metres below ground level. The bundled cache is a limited Bengaluru Urban subset and is stale; it is never presented as a property measurement."
+    },
+    {
+      "source_id": "CGWB_WQ_2020_STATION_COORDINATES",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "Ground Water Quality Data 2020",
+      "document_version_or_year": "2020",
+      "section": "Karnataka station table",
+      "page": null,
+      "source_url": "https://www.cgwb.gov.in/old_website/WQ/Water%20Quality/WQ-2020-WebSiteUP.pdf",
+      "accessed_at": "2026-08-13",
+      "notes": "Official station table supplies the published latitude and longitude for station W125200077350001. Coordinates are rounded to two decimal places and are used only to estimate distance to the monitoring point."
+    },
+    {
+      "source_id": "NWIC_GROUNDWATER_STATIONS",
+      "authority": "National Water Informatics Centre (NWIC)",
+      "document_title": "India-WRIS Groundwater Stations ArcGIS service",
+      "document_version_or_year": "Service metadata current at access date",
+      "section": "Groundwater_Station layer 0",
+      "page": null,
+      "source_url": "https://gis.nwic.in/server/rest/services/NWIC/Groundwater_Stations/MapServer/0",
+      "accessed_at": "2026-08-13",
+      "notes": "Official station metadata service. It does not by itself establish a current depth measurement; water-level observations require a dated CGWB/India-WRIS record."
+    },
+    {
+      "source_id": "NWIC_SOIL_SERVICE",
+      "authority": "National Water Informatics Centre (NWIC)",
+      "document_title": "India-WRIS Soil_1New ArcGIS service",
+      "document_version_or_year": "Service metadata current at access date",
+      "section": "Soil group layer",
+      "page": null,
+      "source_url": "https://gis.nwic.in/server/rest/services/SubInfoSysLCC/Soil_1New/MapServer",
+      "accessed_at": "2026-08-13",
+      "notes": "Official service metadata only. No soil record is used until a documented feature/layer is exported and reviewed. Regional soil class must not be converted into a measured infiltration rate."
+    },
+    {
+      "source_id": "NWIC_GSI_AQUIFER_SYSTEMS",
+      "authority": "National Water Informatics Centre (NWIC) / Geological Survey of India (GSI)",
+      "document_title": "AquiferSystems_GSI ArcGIS Feature Service",
+      "document_version_or_year": "Service metadata current at access date",
+      "section": "Principal Aquifers and Major Aquifers layers",
+      "page": null,
+      "source_url": "https://gis.nwic.in/server/rest/services/NWIC/AquiferSystems_GSI/FeatureServer/layers",
+      "accessed_at": "2026-08-13",
+      "notes": "Official polygon service advertises aquifer/lithology-related fields. No value is used until a reviewed feature intersecting the property coordinate is imported."
     }
   ]
 }

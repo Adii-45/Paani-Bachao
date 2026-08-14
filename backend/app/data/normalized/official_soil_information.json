@@ -1,0 +1,9 @@
+{
+  "datasetStatus": "DATA_UNAVAILABLE",
+  "datasetVersion": null,
+  "importedAt": null,
+  "refreshStrategy": "Periodically import a reviewed official NBSS&LUP/NWIC/Bhuvan polygon export with source layer metadata and geometry.",
+  "sourceService": "https://gis.nwic.in/server/rest/services/SubInfoSysLCC/Soil_1New/MapServer",
+  "notes": "The official service advertises soil layers, but its sublayer schemas/features were not reliably retrievable during implementation. No soil class or infiltration value is inferred.",
+  "records": []
+}

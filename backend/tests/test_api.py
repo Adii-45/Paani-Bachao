@@ -129,6 +129,17 @@ def test_malformed_json_returns_clean_validation_response() -> None:
     assert response.headers["content-type"].startswith("application/json")
 
 
+def test_water_quality_conclusion_requires_evidence_reference(
+    valid_payload: dict[str, object]
+) -> None:
+    valid_payload["waterQualityStatus"] = "VERIFIED_ACCEPTABLE"
+
+    response = post(valid_payload)
+
+    assert response.status_code == 422
+    assert "source reference is required" in response.text
+
+
 def test_assessment_endpoint_sizes_storage_when_monthly_demand_is_supplied(
     valid_payload: dict[str, object]
 ) -> None:

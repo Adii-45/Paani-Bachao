@@ -51,6 +51,8 @@ export default function AssessmentPage() {
     setError("");
     const form = new FormData(event.currentTarget);
     const monthlyDemand = String(form.get("monthlyRainwaterDemandLitres") ?? "").trim();
+    const basement = String(form.get("buildingHasBasement") ?? "").trim();
+    const waterQualityEvidence = String(form.get("waterQualityEvidence") ?? "").trim();
     const payload = {
       location: form.get("location"),
       roofAreaM2: Number(form.get("roofAreaM2")),
@@ -59,6 +61,9 @@ export default function AssessmentPage() {
       groundwaterDepthM: Number(form.get("groundwaterDepthM")),
       availableGroundAreaM2: Number(form.get("availableGroundAreaM2")),
       monthlyRainwaterDemandLitres: monthlyDemand ? Number(monthlyDemand) : undefined,
+      buildingHasBasement: basement ? basement === "true" : undefined,
+      waterQualityStatus: form.get("waterQualityStatus") || "NOT_VERIFIED",
+      waterQualityEvidence: waterQualityEvidence || undefined,
     };
 
     try {
@@ -135,6 +140,19 @@ export default function AssessmentPage() {
               </FormField>
               <FormField id="availableGroundAreaM2" label="Available Ground Area" helper="Open area that could accommodate a recharge structure.">
                 <div className="control-with-unit"><input id="availableGroundAreaM2" name="availableGroundAreaM2" type="number" min="0" max="100000" step="0.1" required defaultValue={savedInputs?.availableGroundAreaM2 ?? ""} placeholder="Enter available open area in square metres" aria-describedby="availableGroundAreaM2-help" /><span>m²</span></div>
+              </FormField>
+              <FormField id="buildingHasBasement" label="Building Basement" helper="Some source-backed recharge designs do not apply to buildings with basements.">
+                <select id="buildingHasBasement" name="buildingHasBasement" defaultValue={savedInputs?.buildingHasBasement === undefined ? "" : String(savedInputs.buildingHasBasement)} aria-describedby="buildingHasBasement-help">
+                  <option value="">Select if known</option><option value="false">No basement</option><option value="true">Has a basement</option>
+                </select>
+              </FormField>
+              <FormField id="waterQualityStatus" label="Recharge Water Quality Review" helper="Do not mark acceptable unless a qualified test or review supports it.">
+                <select id="waterQualityStatus" name="waterQualityStatus" defaultValue={savedInputs?.waterQualityStatus ?? "NOT_VERIFIED"} aria-describedby="waterQualityStatus-help">
+                  <option value="NOT_VERIFIED">Not yet verified</option><option value="VERIFIED_ACCEPTABLE">Reviewed as acceptable</option><option value="UNSUITABLE">Review found unsuitable</option>
+                </select>
+              </FormField>
+              <FormField id="waterQualityEvidence" label="Water Quality Evidence" helper="Required only when recording a reviewed conclusion; enter the report, reviewer or source reference.">
+                <input id="waterQualityEvidence" name="waterQualityEvidence" type="text" maxLength={300} defaultValue={savedInputs?.waterQualityEvidence ?? ""} placeholder="Enter report or review reference if applicable" aria-describedby="waterQualityEvidence-help" />
               </FormField>
             </div>
           </div>
