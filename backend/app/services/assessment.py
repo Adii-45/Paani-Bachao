@@ -13,6 +13,7 @@ from ..engineering.rtrwh import (
     StorageSizingStatus,
     assess_storage_size,
     calculate_annual_harvest,
+    simulate_storage,
 )
 from ..provenance.models import DataQuality, DataStatus, ValueProvenance
 from ..provenance.registry import citations_for
@@ -156,19 +157,38 @@ def create_assessment(
             else None
         ),
     )
+    recharge_periods = ()
+    recharge_supply = None
+    recharge_overflow = None
+    if (
+        inputs.storageCapacityLitres is not None
+        and monthly_normal is not None
+        and coefficient_value is not None
+        and inputs.monthlyRainwaterDemandLitres is not None
+    ):
+        actual_storage = simulate_storage(
+            monthly_rainfall_mm=monthly_normal.values_mm,
+            roof_area=AreaSquareMeters(inputs.roofAreaM2),
+            runoff_coefficient=RunoffCoefficient(coefficient_value),
+            monthly_demand=VolumeLitres(inputs.monthlyRainwaterDemandLitres),
+            tank_capacity=VolumeLitres(inputs.storageCapacityLitres),
+        )
+        recharge_periods = actual_storage.periods
+        recharge_supply = actual_storage.total_supplied_litres
+        recharge_overflow = actual_storage.total_overflow_litres
     recharge_quantity = assess_recharge_quantity(
         annual_harvest_litres=(
-            sum(period.inflow_litres for period in storage.periods)
-            if storage.periods
+            sum(period.inflow_litres for period in recharge_periods)
+            if recharge_periods
             else None
         ),
-        annual_demand_supplied_litres=storage.estimated_supply_litres,
-        annual_overflow_litres=storage.estimated_overflow_litres,
+        annual_demand_supplied_litres=recharge_supply,
+        annual_overflow_litres=recharge_overflow,
         catchment_losses_litres=(
             harvest.estimated_losses.value if harvest is not None else None
         ),
         ending_storage_litres=(
-            storage.periods[-1].storage_end_litres if storage.periods else None
+            recharge_periods[-1].storage_end_litres if recharge_periods else None
         ),
     )
     user_groundwater_has_metadata = all(
@@ -212,10 +232,9 @@ def create_assessment(
     )
     has_soil_evidence = soil_lookup.information is not None
     hydrogeology_available = all(
-        status is DataStatus.DATA_AVAILABLE
+        status in {DataStatus.DATA_AVAILABLE, DataStatus.DATA_STALE}
         for status in (
             hydrogeology_lookup.geology_status,
-            hydrogeology_lookup.geomorphology_status,
             hydrogeology_lookup.aquifer_status,
         )
     )
@@ -223,6 +242,7 @@ def create_assessment(
         groundwater_depth_m_bgl=groundwater_depth,
         groundwater_has_observation_metadata=groundwater_has_metadata,
         groundwater_observation_season=groundwater_season,
+        groundwater_data_stale=groundwater_lookup.status is DataStatus.DATA_STALE,
         recharge_water_litres=recharge_quantity.potential_recharge_litres_per_year,
         has_infiltration_evidence=has_soil_evidence,
         infiltration_is_property_measured=measured_infiltration,
@@ -234,6 +254,11 @@ def create_assessment(
         hydrogeology_reason=hydrogeology_lookup.message,
     )
     hydrogeology_information = hydrogeology_lookup.information
+    regional_methodology_id = (
+        hydrogeology_information.aquifer_characteristics.get("arMethodologyRegion")
+        if hydrogeology_information
+        else None
+    )
     structure_selection = select_structure(
         feasibility,
         state=(normalized_location.state if normalized_location else inputs.state),
@@ -243,6 +268,7 @@ def create_assessment(
         building_has_basement=inputs.buildingHasBasement,
         roof_area_m2=inputs.roofAreaM2,
         available_ground_area_m2=inputs.availableGroundAreaM2,
+        regional_methodology_id=regional_methodology_id,
     )
     structure_sizing = assess_structure_size(
         structure_selection,
@@ -398,7 +424,6 @@ def create_assessment(
             ],
         ),
         artificialRecharge=ArtificialRechargeResult(
-            potential=None,
             potentialRechargeLitresPerYear=(
                 recharge_quantity.potential_recharge_litres_per_year
             ),
@@ -408,6 +433,7 @@ def create_assessment(
                     displayName={
                         "RECHARGE_TRENCH": "Recharge Trench",
                         "TRENCH_WITH_RECHARGE_WELL": "Trench with Recharge Well",
+                        "RECHARGE_WELL": "Recharge Well",
                     }[structure_selection.recommended_structure],
                 )
                 if structure_selection.recommended_structure
@@ -500,7 +526,7 @@ def create_assessment(
             and storage.status is StorageSizingStatus.SIZE_AVAILABLE
             and feasibility.status.value in {"ELIGIBLE", "CONDITIONALLY_ELIGIBLE"}
             and structure_selection.recommended_structure is not None
-            and structure_sizing.status == "INDICATIVE_DESIGN_AVAILABLE"
+            and structure_sizing.status in {"INDICATIVE_DESIGN_AVAILABLE", "PARTIAL_INDICATIVE_DESIGN"}
             else "LIMITED"
             if harvest
             else "INSUFFICIENT"

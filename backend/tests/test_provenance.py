@@ -14,7 +14,7 @@ def test_source_registry_is_machine_readable_and_complete() -> None:
         assert source.document_title
         assert source.document_version_or_year
         assert source.source_url.startswith("https://")
-        assert source.accessed_at.isoformat() == "2026-08-13"
+        assert source.accessed_at.isoformat() in {"2026-08-13", "2026-08-14"}
 
 
 def test_bis_status_is_recorded_without_encoding_unreviewed_clauses() -> None:

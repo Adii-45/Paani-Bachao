@@ -181,6 +181,7 @@ class DelhiHydrogeologyProvider:
                 geomorphology="alluvial plain",
                 groundwaterProspect="reviewed",
                 aquiferType="unconfined alluvial aquifer",
+                aquiferCharacteristics={"arMethodologyRegion": "DELHI_CGWB_STANDARD"},
                 spatialResolution=EnvironmentalResolution.REGIONAL_LAYER,
                 datasetVersion="deterministic fixture",
                 provenance=TEST_PROVENANCE,
@@ -550,7 +551,8 @@ def test_full_phase_one_flow_reaches_source_backed_ar_design() -> None:
             roofMaterial="RCC",
             groundwaterDepthM=10,
             availableGroundAreaM2=10,
-            monthlyRainwaterDemandLitres=1_000,
+                monthlyRainwaterDemandLitres=1_000,
+                storageCapacityLitres=5_000,
             buildingHasBasement=False,
             waterQualityStatus="VERIFIED_ACCEPTABLE",
             waterQualityEvidence="Deterministic qualified-review fixture",
@@ -569,9 +571,9 @@ def test_full_phase_one_flow_reaches_source_backed_ar_design() -> None:
     assert result.artificialRecharge.recommendedStructure is not None
     assert result.artificialRecharge.recommendedStructure.type == "RECHARGE_TRENCH"
     assert result.artificialRecharge.dimensions == {
-        "lengthM": 1.2,
-        "widthM": 1.2,
-        "depthM": 1.4,
+        "trenchLengthM": 1.2,
+        "trenchWidthM": 1.2,
+        "trenchDepthM": 1.4,
     }
     assert result.artificialRecharge.sizingStatus == "INDICATIVE_DESIGN_AVAILABLE"
     assert result.artificialRecharge.fieldVerificationRequired
@@ -598,6 +600,7 @@ def test_resolved_location_with_missing_rainfall_stops_rtrwh_and_ar_safely() -> 
             location="Delhi",
             roofMaterial="RCC",
             monthlyRainwaterDemandLitres=1_000,
+            storageCapacityLitres=5_000,
         ),
         location_resolver=DelhiResolver(),
         rainfall_provider=UnavailableRainfallProvider(),
@@ -621,7 +624,8 @@ def test_missing_groundwater_keeps_rtrwh_but_blocks_ar_decision() -> None:
             location="Delhi",
             roofAreaM2=100,
             roofMaterial="RCC",
-            monthlyRainwaterDemandLitres=1_000,
+                monthlyRainwaterDemandLitres=1_000,
+                storageCapacityLitres=5_000,
             buildingHasBasement=False,
             waterQualityStatus="VERIFIED_ACCEPTABLE",
             waterQualityEvidence="Deterministic qualified-review fixture",
@@ -646,6 +650,7 @@ def test_regional_infiltration_proxy_returns_conditional_with_field_test() -> No
             roofAreaM2=100,
             roofMaterial="RCC",
             monthlyRainwaterDemandLitres=1_000,
+            storageCapacityLitres=5_000,
             buildingHasBasement=False,
             waterQualityStatus="VERIFIED_ACCEPTABLE",
             waterQualityEvidence="Deterministic qualified-review fixture",
@@ -700,6 +705,7 @@ def test_full_flow_rejects_structure_when_site_footprint_is_too_small() -> None:
             roofMaterial="RCC",
             availableGroundAreaM2=1,
             monthlyRainwaterDemandLitres=1_000,
+            storageCapacityLitres=5_000,
             buildingHasBasement=False,
             waterQualityStatus="VERIFIED_ACCEPTABLE",
             waterQualityEvidence="Deterministic qualified-review fixture",
@@ -727,6 +733,7 @@ def test_zero_storage_overflow_produces_no_positive_recharge_or_structure() -> N
             roofAreaM2=100,
             roofMaterial="RCC",
             monthlyRainwaterDemandLitres=1_000,
+            storageCapacityLitres=100_000,
             buildingHasBasement=False,
             waterQualityStatus="VERIFIED_ACCEPTABLE",
             waterQualityEvidence="Deterministic qualified-review fixture",

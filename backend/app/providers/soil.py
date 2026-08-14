@@ -87,7 +87,7 @@ class NormalizedOfficialSoilProvider:
                 message="Multiple official soil polygons contain this coordinate.",
             )
         return SoilLookup(
-            status=DataStatus.DATA_UNAVAILABLE,
+            status=DataStatus.UNSUPPORTED_LOCATION,
             message=(
                 "No reviewed soil polygon covers this "
                 "coordinate. A field infiltration/percolation test is required."

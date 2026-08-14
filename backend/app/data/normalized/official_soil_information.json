@@ -1,9 +1,27 @@
 {
-  "datasetStatus": "DATA_UNAVAILABLE",
-  "datasetVersion": null,
-  "importedAt": null,
-  "refreshStrategy": "Periodically import a reviewed official NBSS&LUP/NWIC/Bhuvan polygon export with source layer metadata and geometry.",
-  "sourceService": "https://gis.nwic.in/server/rest/services/SubInfoSysLCC/Soil_1New/MapServer",
-  "notes": "The official service advertises soil layers, but its sublayer schemas/features were not reliably retrievable during implementation. No soil class or infiltration value is inferred.",
-  "records": []
+  "datasetStatus": "DATA_AVAILABLE",
+  "datasetVersion": "CGWB Bengaluru NAQUIM 2024-25",
+  "importedAt": "2026-08-14T00:00:00Z",
+  "refreshStrategy": "Review when CGWB publishes a replacement Bengaluru aquifer-management report.",
+  "notes": "One regional soil proxy for Jayanagar. It is not a measured infiltration rate and always requires a property field test.",
+  "records": [
+    {
+      "recordId": "cgwb-bengaluru-jayanagar-regional-soil",
+      "soilClass": "Red lateritic and red soil (regional Bengaluru description)",
+      "soilTexture": "Fine loamy to clayey",
+      "permeabilityClass": null,
+      "sourceCategory": "Regional report description",
+      "sourceCode": null,
+      "datasetName": "NAQUIM 2.0 Bengaluru Urban Area",
+      "datasetVersion": "2024-25",
+      "sourceOrganization": "Central Ground Water Board",
+      "measuredInfiltrationRateMmPerHr": null,
+      "infiltrationDataType": "REGIONAL_SOIL_PROXY",
+      "spatialResolution": "REGIONAL_LAYER",
+      "fieldTestRecommended": true,
+      "provenance": {"quality":"AUTHORITATIVE_DATASET","sourceIds":["CGWB_BENGALURU_NAQUIM_2025","OPENSTREETMAP_NOMINATIM"],"sourceRecord":"Bengaluru soil description; Jayanagar Nominatim place extent","sourceDateOrVersion":"2024-25","spatialResolution":"regional report proxy within geocoder place extent","temporalResolution":"static regional description","retrievedAt":"2026-08-14T00:00:00Z","notes":"No measured infiltration rate is inferred; field testing is required."},
+      "boundingBox": [77.5624229,12.9092731,77.6024229,12.9492731],
+      "geometry": {"type":"Polygon","coordinates":[[[77.5624229,12.9092731],[77.6024229,12.9092731],[77.6024229,12.9492731],[77.5624229,12.9492731],[77.5624229,12.9092731]]]}
+    }
+  ]
 }

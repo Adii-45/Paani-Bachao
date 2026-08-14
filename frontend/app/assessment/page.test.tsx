@@ -27,8 +27,6 @@ function fillValidForm() {
   });
   fireEvent.change(screen.getByLabelText(/Roof Area/), { target: { value: "120" } });
   fireEvent.change(screen.getByLabelText(/Roof Material/), { target: { value: "RCC" } });
-  fireEvent.change(screen.getByLabelText(/Soil Type/), { target: { value: "SANDY_LOAM" } });
-  fireEvent.change(screen.getByLabelText(/Groundwater Depth/), { target: { value: "8" } });
   fireEvent.change(screen.getByLabelText(/Available Ground Area/), { target: { value: "15" } });
 }
 
@@ -50,19 +48,19 @@ describe("property assessment form", () => {
       /Location \/ Locality/,
       /Roof Area/,
       /Roof Material/,
-      /Soil Type/,
-      /Groundwater Depth/,
       /Available Ground Area/,
     ].map((label) => screen.getByLabelText(label));
 
     for (const field of fields) expect(field).toBeRequired();
     expect(screen.getByRole("option", { name: "RCC / Concrete" })).toHaveValue("RCC");
-    expect(screen.getAllByRole("option", { name: "Don't know" })).toHaveLength(2);
+    expect(screen.getAllByRole("option", { name: "Don't know" })).toHaveLength(1);
     expect(screen.getByLabelText(/Roof Area/)).toHaveAttribute("min", "0.1");
-    expect(screen.getByLabelText(/Groundwater Depth/)).toHaveAttribute("min", "0");
     expect(screen.getByLabelText(/Planned Monthly Rainwater Use/)).not.toBeRequired();
+    expect(screen.getByLabelText(/Existing or Planned Tank Capacity/)).not.toBeRequired();
     expect(screen.getByLabelText(/Building Basement/)).not.toBeRequired();
-    expect(screen.getByLabelText(/Recharge Water Quality Review/)).toHaveValue("NOT_VERIFIED");
+    expect(screen.queryByLabelText(/Recharge Water Quality Review/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Soil Type/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Groundwater Depth/)).not.toBeInTheDocument();
   });
 
   it("sends optional planned monthly use when the user requests tank sizing", async () => {
@@ -75,6 +73,9 @@ describe("property assessment form", () => {
     fireEvent.change(screen.getByLabelText(/Planned Monthly Rainwater Use/), {
       target: { value: "500" },
     });
+    fireEvent.change(screen.getByLabelText(/Existing or Planned Tank Capacity/), {
+      target: { value: "5000" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /Calculate Assessment/ }));
 
@@ -82,6 +83,7 @@ describe("property assessment form", () => {
     const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
     expect(JSON.parse(request.body as string)).toMatchObject({
       monthlyRainwaterDemandLitres: 500,
+      storageCapacityLitres: 5000,
     });
   });
 
@@ -123,8 +125,6 @@ describe("property assessment form", () => {
         location: "Bengaluru",
         roofAreaM2: 120,
         roofMaterial: "RCC",
-        soilType: "SANDY_LOAM",
-        groundwaterDepthM: 8,
         availableGroundAreaM2: 15,
         waterQualityStatus: "NOT_VERIFIED",
       }),
@@ -142,8 +142,6 @@ describe("property assessment form", () => {
       location: "Bengaluru",
       roofAreaM2: 120,
       roofMaterial: "RCC",
-      soilType: "SANDY_LOAM",
-      groundwaterDepthM: 8,
       availableGroundAreaM2: 15,
       waterQualityStatus: "NOT_VERIFIED",
     });
@@ -187,8 +185,6 @@ describe("property assessment form", () => {
             location: "Mumbai",
             roofAreaM2: 85.5,
             roofMaterial: "TILES",
-            soilType: "LOAM",
-            groundwaterDepthM: 6,
             availableGroundAreaM2: 5,
           })
         : null
@@ -199,6 +195,6 @@ describe("property assessment form", () => {
     expect(screen.getByLabelText(/Location \/ Locality/)).toHaveValue("Mumbai");
     expect(screen.getByLabelText(/Roof Area/)).toHaveValue(85.5);
     expect(screen.getByLabelText(/Roof Material/)).toHaveValue("TILES");
-    expect(screen.getByLabelText(/Soil Type/)).toHaveValue("LOAM");
+    expect(screen.queryByLabelText(/Soil Type/)).not.toBeInTheDocument();
   });
 });

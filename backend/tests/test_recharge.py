@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from app.engineering.recharge.feasibility import (
@@ -10,7 +13,11 @@ from app.engineering.recharge.quantity import (
     RechargeQuantityStatus,
     assess_recharge_quantity,
 )
-from app.engineering.recharge.sizing import assess_structure_size
+from app.engineering.recharge.sizing import (
+    METRES_PER_FOOT,
+    SQUARE_METRES_PER_SQUARE_FOOT,
+    assess_structure_size,
+)
 from app.engineering.recharge.structure_selection import select_structure
 
 
@@ -117,6 +124,7 @@ def test_delhi_alluvial_site_selects_trench_from_published_conditions() -> None:
         building_has_basement=False,
         roof_area_m2=120,
         available_ground_area_m2=10,
+        regional_methodology_id="DELHI_CGWB_STANDARD",
     )
 
     assert result.status == "RECOMMENDED"
@@ -133,6 +141,7 @@ def test_structure_rejected_when_published_footprint_does_not_fit() -> None:
         building_has_basement=False,
         roof_area_m2=120,
         available_ground_area_m2=2,
+        regional_methodology_id="DELHI_CGWB_STANDARD",
     )
 
     assert result.status == "NO_STRUCTURE_FITS_AVAILABLE_AREA"
@@ -149,6 +158,7 @@ def test_selection_does_not_generalize_delhi_table_to_other_states() -> None:
         building_has_basement=False,
         roof_area_m2=100,
         available_ground_area_m2=10,
+        regional_methodology_id="DELHI_CGWB_STANDARD",
     )
 
     assert result.status == "UNSUPPORTED_LOCATION_FOR_SELECTION"
@@ -164,6 +174,7 @@ def test_trench_dimensions_come_from_published_roof_area_band() -> None:
         building_has_basement=False,
         roof_area_m2=120,
         available_ground_area_m2=10,
+        regional_methodology_id="DELHI_CGWB_STANDARD",
     )
     result = assess_structure_size(
         selection,
@@ -174,7 +185,11 @@ def test_trench_dimensions_come_from_published_roof_area_band() -> None:
     )
 
     assert result.status == "INDICATIVE_DESIGN_AVAILABLE"
-    assert result.dimensions == {"lengthM": 1.8, "widthM": 1.5, "depthM": 1.5}
+    assert result.dimensions == {
+        "trenchLengthM": 1.8,
+        "trenchWidthM": 1.5,
+        "trenchDepthM": 1.5,
+    }
     assert result.required_footprint_m2 == 2.7
     assert len(result.filter_media) == 4
 
@@ -188,6 +203,7 @@ def test_trench_with_well_needs_verified_intake_zone() -> None:
         building_has_basement=True,
         roof_area_m2=100,
         available_ground_area_m2=10,
+        regional_methodology_id="DELHI_CGWB_STANDARD",
     )
     result = assess_structure_size(
         selection,
@@ -198,8 +214,10 @@ def test_trench_with_well_needs_verified_intake_zone() -> None:
     )
 
     assert selection.recommended_structure == "TRENCH_WITH_RECHARGE_WELL"
-    assert result.status == "INSUFFICIENT_DATA_FOR_SIZING"
+    assert result.status == "PARTIAL_INDICATIVE_DESIGN"
     assert "verified granular or fractured intake zone" in result.missing_inputs
+    assert result.dimensions["chamberDepthM"] == 0.5
+    assert result.dimensions["finalWellTerminationDepthM"] is None
 
 
 def test_trench_with_well_uses_source_depth_range_when_zone_is_verified() -> None:
@@ -211,6 +229,7 @@ def test_trench_with_well_uses_source_depth_range_when_zone_is_verified() -> Non
         building_has_basement=False,
         roof_area_m2=100,
         available_ground_area_m2=10,
+        regional_methodology_id="DELHI_CGWB_STANDARD",
     )
     result = assess_structure_size(
         selection,
@@ -223,5 +242,112 @@ def test_trench_with_well_uses_source_depth_range_when_zone_is_verified() -> Non
 
     assert result.status == "INDICATIVE_DESIGN_AVAILABLE"
     assert result.dimensions is not None
-    assert result.dimensions["rechargeWellDepthMinM"] == 17
-    assert result.dimensions["rechargeWellDepthMaxM"] == 18
+    assert result.dimensions["indicativeWellTerminationDepthMinM"] == 17
+    assert result.dimensions["indicativeWellTerminationDepthMaxM"] == 18
+
+
+def test_bengaluru_recharge_well_uses_exact_published_kscst_row() -> None:
+    roof_m2 = 1100 * 0.09290304
+    open_m2 = 100 * 0.09290304
+    selection = select_structure(
+        feasibility(groundwater_depth_m_bgl=9.84),
+        state="Karnataka",
+        geology="Peninsular gneiss",
+        groundwater_depth_m_bgl=9.84,
+        building_has_basement=False,
+        roof_area_m2=roof_m2,
+        available_ground_area_m2=open_m2,
+        regional_methodology_id="BENGALURU_NAQUIM_URBAN_CORE",
+    )
+    result = assess_structure_size(
+        selection,
+        roof_area_m2=roof_m2,
+        available_ground_area_m2=open_m2,
+        available_recharge_water_litres=5_000,
+        post_monsoon_groundwater_depth_m=9.84,
+    )
+
+    assert result.status == "PARTIAL_INDICATIVE_DESIGN"
+    assert result.dimensions["designStorageVolumeLitres"] == 2100
+    assert result.dimensions["wellOptions"][0] == {
+        "diameterM": 0.91,
+        "publishedCalculatedDepthM": 3.35,
+        "minimumDesignDepthM": 3.35,
+        "footprintM2": 0.66,
+    }
+    assert result.dimensions["finalAquiferIntakeDepthM"] is None
+
+
+def test_bengaluru_recharge_well_does_not_interpolate_unpublished_area() -> None:
+    selection = select_structure(
+        feasibility(groundwater_depth_m_bgl=9.84),
+        state="Karnataka",
+        geology="Peninsular gneiss",
+        groundwater_depth_m_bgl=9.84,
+        building_has_basement=False,
+        roof_area_m2=100,
+        available_ground_area_m2=10,
+        regional_methodology_id="BENGALURU_NAQUIM_URBAN_CORE",
+    )
+    result = assess_structure_size(
+        selection,
+        roof_area_m2=100,
+        available_ground_area_m2=10,
+        available_recharge_water_litres=5_000,
+    )
+
+    assert result.status == "INSUFFICIENT_DATA_FOR_SIZING"
+    assert result.dimensions is None
+    assert "published KSCST" in result.missing_inputs[0]
+
+
+def test_reviewed_kscst_subset_matches_published_rows_and_units() -> None:
+    """KSCST, RWH Tank and Well Sizes, residential square-foot table.
+
+    These are the exact reviewed source rows; keeping the expected transcription
+    in the test catches accidental interpolation, extrapolation, or unit edits.
+    """
+
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "data"
+        / "source_backed"
+        / "kscst_residential_recharge_well_table.json"
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    expected_rows = [
+        (600, 600, 0, 1100, 6, 3, 2),
+        (1200, 1200, 0, 2200, 11, 6, 4),
+        (1200, 1100, 100, 2100, 11, 6, 4),
+        (2000, 2000, 0, 3700, 19, 11, 7),
+        (2400, 2400, 0, 4500, 23, 13, 8),
+        (3000, 3000, 0, 5600, 28, 16, 10),
+        (3500, 3500, 0, 6500, 33, 19, 12),
+        (4000, 4000, 0, 7400, 37, 21, 13),
+    ]
+    actual_rows = [
+        (
+            row["plotAreaSqFt"],
+            row["roofAreaSqFt"],
+            row["openAreaSqFt"],
+            row["designVolumeLitres"],
+            row["depth3FtDiameterFt"],
+            row["depth4FtDiameterFt"],
+            row["depth5FtDiameterFt"],
+        )
+        for row in payload["rows"]
+    ]
+
+    assert payload["areaUnit"] == "square feet"
+    assert payload["wellDiameterUnit"] == "feet"
+    assert payload["wellDepthUnit"] == "feet"
+    assert payload["minimumWellDepthFt"] == 10
+    assert actual_rows == expected_rows
+
+
+def test_kscst_foot_and_square_foot_conversions_do_not_mix_dimensions() -> None:
+    assert SQUARE_METRES_PER_SQUARE_FOOT == pytest.approx(0.09290304)
+    assert METRES_PER_FOOT == pytest.approx(0.3048)
+    assert 100 * SQUARE_METRES_PER_SQUARE_FOOT == pytest.approx(9.290304)
+    assert 10 * METRES_PER_FOOT == pytest.approx(3.048)

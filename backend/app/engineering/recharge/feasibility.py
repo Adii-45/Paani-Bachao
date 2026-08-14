@@ -57,6 +57,7 @@ def evaluate_feasibility(
     groundwater_depth_m_bgl: float | None,
     groundwater_has_observation_metadata: bool,
     groundwater_observation_season: str | None = None,
+    groundwater_data_stale: bool = False,
     recharge_water_litres: float | None = None,
     has_infiltration_evidence: bool,
     infiltration_is_property_measured: bool = False,
@@ -124,6 +125,18 @@ def evaluate_feasibility(
             ),
             source_ids=("CGWB_AR_FAQ_2025",),
         )
+    elif groundwater_data_stale:
+        groundwater_criterion = FeasibilityCriterion(
+            criterion="groundwater_observation",
+            result=CriterionStatus.REQUIRES_VERIFICATION,
+            observed_value=groundwater_depth_m_bgl,
+            required_condition="A current post-monsoon groundwater observation confirmed for the property.",
+            reason=(
+                "The nearby post-monsoon groundwater observation is source-backed but stale; "
+                "confirm the current property water level before design."
+            ),
+            source_ids=("CGWB_AR_FAQ_2025", "CGWB_NAQUIM"),
+        )
     elif not post_monsoon:
         groundwater_criterion = FeasibilityCriterion(
             criterion="groundwater_observation",
@@ -186,7 +199,7 @@ def evaluate_feasibility(
         ),
         observed_value=None,
         required_condition=(
-            "Applicable geology, geomorphology and aquifer characteristics at stated resolution."
+            "Applicable geology and aquifer characteristics at stated resolution."
         ),
         reason=hydrogeology_reason
         or (

@@ -144,7 +144,7 @@ def test_coordinate_outside_all_polygons_is_unavailable(tmp_path: Path) -> None:
 
     result = provider.lookup(location)
 
-    assert result.status is DataStatus.DATA_UNAVAILABLE
+    assert result.status is DataStatus.UNSUPPORTED_LOCATION
     assert result.information is None
 
 

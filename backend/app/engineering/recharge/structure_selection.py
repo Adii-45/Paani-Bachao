@@ -4,7 +4,11 @@ from .feasibility import FeasibilityResult, FeasibilityStatus
 from .standard_designs import design_row, normalize_formation
 
 
-SOURCE_ID = "CGWB_DELHI_STANDARD_DESIGNS"
+DELHI_SOURCE_ID = "CGWB_DELHI_STANDARD_DESIGNS"
+BENGALURU_SOURCE_IDS = (
+    "CGWB_BENGALURU_NAQUIM_2025",
+    "KSCST_RWH_TANK_WELL_SIZES",
+)
 
 
 @dataclass(frozen=True)
@@ -42,8 +46,17 @@ def select_structure(
     building_has_basement: bool | None = None,
     roof_area_m2: float | None = None,
     available_ground_area_m2: float | None = None,
+    regional_methodology_id: str | None = None,
 ) -> StructureSelectionResult:
-    """Apply only the reviewed CGWB Delhi standard-design applicability rules."""
+    """Apply only a reviewed methodology identified by intersecting source data."""
+
+    source_ids = (
+        BENGALURU_SOURCE_IDS
+        if regional_methodology_id == "BENGALURU_NAQUIM_URBAN_CORE"
+        else (DELHI_SOURCE_ID,)
+        if regional_methodology_id == "DELHI_CGWB_STANDARD"
+        else ()
+    )
 
     if feasibility.status in {
         FeasibilityStatus.NOT_ELIGIBLE,
@@ -56,9 +69,60 @@ def select_structure(
             selection_reasons=(),
             rejected_structures=(),
             missing_inputs=feasibility.reasons,
-            source_ids=(SOURCE_ID,),
+            source_ids=source_ids,
         )
-    if not _is_delhi(state):
+    if regional_methodology_id == "BENGALURU_NAQUIM_URBAN_CORE":
+        missing = []
+        if groundwater_depth_m_bgl is None:
+            missing.append("reviewed post-monsoon groundwater depth")
+        if roof_area_m2 is None:
+            missing.append("roof catchment area")
+        if available_ground_area_m2 is None:
+            missing.append("available construction footprint")
+        if missing:
+            return StructureSelectionResult(
+                status="INSUFFICIENT_DATA_FOR_SELECTION",
+                recommended_structure=None,
+                alternative_structures=(),
+                selection_reasons=(),
+                rejected_structures=(),
+                missing_inputs=tuple(missing),
+                source_ids=source_ids,
+            )
+        if groundwater_depth_m_bgl < 3:
+            return StructureSelectionResult(
+                status="NO_APPLICABLE_SOURCE_BACKED_STRUCTURE",
+                recommended_structure=None,
+                alternative_structures=(),
+                selection_reasons=(),
+                rejected_structures=(RejectedStructure(
+                    structure="RECHARGE_WELL",
+                    reason="The reviewed post-monsoon groundwater level is shallower than the CGWB recharge exclusion threshold.",
+                    source_ids=source_ids,
+                ),),
+                missing_inputs=(),
+                source_ids=source_ids,
+            )
+        # CGWB Bengaluru NAQUIM identifies rooftop recharge pits/wells/trenches
+        # for the urban core. KSCST publishes a residential recharge-well table.
+        # Both remain conditional because property infiltration and the final
+        # aquifer intake zone require field verification.
+        return StructureSelectionResult(
+            status="CONDITIONAL_RECOMMENDATION",
+            recommended_structure="RECHARGE_WELL",
+            alternative_structures=("RECHARGE_PIT",),
+            selection_reasons=(
+                "The resolved site intersects the CGWB Bengaluru urban-core methodology area.",
+                "CGWB identifies rooftop recharge pits/wells and percolation trenches for this urban setting.",
+                "KSCST provides a residential recharge-well sizing table for the reported roof and open areas.",
+                "Final choice and intake depth require field infiltration and hydrogeological verification.",
+            ),
+            rejected_structures=(),
+            missing_inputs=(),
+            source_ids=source_ids,
+        )
+
+    if regional_methodology_id != "DELHI_CGWB_STANDARD" or not _is_delhi(state):
         return StructureSelectionResult(
             status="UNSUPPORTED_LOCATION_FOR_SELECTION",
             recommended_structure=None,
@@ -66,10 +130,9 @@ def select_structure(
             selection_reasons=(),
             rejected_structures=(),
             missing_inputs=(
-                "a reviewed, location-specific structure-selection method; the installed "
-                "CGWB standard-design table applies only to NCT Delhi",
+                "a reviewed, location-specific structure-selection method intersecting the resolved coordinate",
             ),
-            source_ids=(SOURCE_ID,),
+            source_ids=source_ids,
         )
 
     formation = normalize_formation(geology, lithology)
@@ -92,7 +155,7 @@ def select_structure(
             selection_reasons=(),
             rejected_structures=(),
             missing_inputs=tuple(missing),
-            source_ids=(SOURCE_ID,),
+            source_ids=source_ids,
         )
 
     rejected: list[RejectedStructure] = []
@@ -107,7 +170,7 @@ def select_structure(
                         "The Delhi trench-without-well design is limited to alluvial formation "
                         "for groundwater depth greater than 5 m and up to 15 m bgl."
                     ),
-                    source_ids=(SOURCE_ID,),
+                    source_ids=source_ids,
                 )
             )
         elif building_has_basement:
@@ -118,11 +181,22 @@ def select_structure(
                         "The CGWB Delhi design directs buildings with basements to rainwater "
                         "storage rather than this recharge-trench design."
                     ),
-                    source_ids=(SOURCE_ID,),
+                    source_ids=source_ids,
                 )
             )
         else:
             structure = "RECHARGE_TRENCH"
+            rejected.append(
+                RejectedStructure(
+                    structure="TRENCH_WITH_RECHARGE_WELL",
+                    reason=(
+                        "The reviewed post-monsoon groundwater depth is not greater "
+                        "than 15 m bgl, which is required by the Delhi trench-with-"
+                        "recharge-well table."
+                    ),
+                    source_ids=source_ids,
+                )
+            )
             reasons.extend(
                 (
                     "The site is in NCT Delhi and the reviewed formation is alluvial.",
@@ -132,6 +206,16 @@ def select_structure(
             )
     elif groundwater_depth_m_bgl > 15 and formation in {"ALLUVIAL", "HARD_ROCK"}:
         structure = "TRENCH_WITH_RECHARGE_WELL"
+        rejected.append(
+            RejectedStructure(
+                structure="RECHARGE_TRENCH",
+                reason=(
+                    "The reviewed post-monsoon groundwater depth exceeds the Delhi "
+                    "trench-without-well table's 15 m bgl upper limit."
+                ),
+                source_ids=source_ids,
+            )
+        )
         reasons.extend(
             (
                 "The site is in NCT Delhi with alluvial or hard-rock formation.",
@@ -144,12 +228,12 @@ def select_structure(
                 RejectedStructure(
                     structure="RECHARGE_TRENCH",
                     reason="The groundwater-depth/formation conditions do not match the Delhi trench table.",
-                    source_ids=(SOURCE_ID,),
+                    source_ids=source_ids,
                 ),
                 RejectedStructure(
                     structure="TRENCH_WITH_RECHARGE_WELL",
                     reason="The groundwater-depth/formation conditions do not match the Delhi trench-with-well table.",
-                    source_ids=(SOURCE_ID,),
+                    source_ids=source_ids,
                 ),
             )
         )
@@ -162,7 +246,7 @@ def select_structure(
             selection_reasons=(),
             rejected_structures=tuple(rejected),
             missing_inputs=(),
-            source_ids=(SOURCE_ID,),
+            source_ids=source_ids,
         )
 
     row = design_row(structure, roof_area_m2)
@@ -171,7 +255,7 @@ def select_structure(
             RejectedStructure(
                 structure=structure,
                 reason="The published CGWB standard-design table covers roof areas only up to 500 m².",
-                source_ids=(SOURCE_ID,),
+                source_ids=source_ids,
             )
         )
         return StructureSelectionResult(
@@ -181,7 +265,7 @@ def select_structure(
             selection_reasons=(),
             rejected_structures=tuple(rejected),
             missing_inputs=(),
-            source_ids=(SOURCE_ID,),
+            source_ids=source_ids,
         )
 
     required_footprint = row["lengthM"] * row["widthM"]
@@ -193,7 +277,7 @@ def select_structure(
                     f"Published internal footprint is {required_footprint:.2f} m², "
                     f"which exceeds the reported {available_ground_area_m2:.2f} m²."
                 ),
-                source_ids=(SOURCE_ID,),
+                source_ids=source_ids,
             )
         )
         return StructureSelectionResult(
@@ -203,7 +287,7 @@ def select_structure(
             selection_reasons=(),
             rejected_structures=tuple(rejected),
             missing_inputs=(),
-            source_ids=(SOURCE_ID,),
+            source_ids=source_ids,
         )
 
     return StructureSelectionResult(
@@ -217,5 +301,5 @@ def select_structure(
         selection_reasons=tuple(reasons),
         rejected_structures=tuple(rejected),
         missing_inputs=(),
-        source_ids=(SOURCE_ID,),
+        source_ids=source_ids,
     )

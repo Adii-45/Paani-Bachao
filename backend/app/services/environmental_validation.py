@@ -212,9 +212,19 @@ def _period_metadata(
         dates = sorted(
             record.observation_date  # type: ignore[attr-defined]
             for record in records
+            if record.observation_date is not None  # type: ignore[attr-defined]
         )
         if dates:
             return f"{dates[0].isoformat()} to {dates[-1].isoformat()}", dates[-1]
+        periods = sorted(
+            {
+                record.observation_period  # type: ignore[attr-defined]
+                for record in records
+                if record.observation_period  # type: ignore[attr-defined]
+            }
+        )
+        if periods:
+            return "; ".join(periods), None
     return None, None
 
 

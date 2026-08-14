@@ -1,4 +1,3 @@
-from datetime import date
 import json
 from pathlib import Path
 
@@ -32,19 +31,17 @@ def test_coordinate_resolves_nearest_real_cgwb_observation() -> None:
     result = NormalizedCgwbGroundwaterProvider().lookup(bengaluru_location())
 
     assert result.status is DataStatus.DATA_STALE
-    assert result.record_count == 1
+    assert result.record_count == 5
     assert result.observation is not None
-    assert result.observation.station_id == "W125200077350001"
+    assert result.observation.station_id == "CGWB-KA-JAYANAGAR"
     assert result.observation.station_name == "Jayanagar"
-    assert result.observation.depth_below_ground_level_m == 3.0
-    assert result.observation.observation_date == date(2022, 11, 5)
-    assert result.observation.season == "NOVEMBER_MONITORING"
+    assert result.observation.depth_below_ground_level_m == 9.84
+    assert result.observation.observation_date is None
+    assert result.observation.observation_period == "November 2024"
+    assert result.observation.season == "POST_MONSOON_NOVEMBER"
     assert result.observation.distance_from_property_m is not None
     assert result.observation.distance_from_property_m > 0
-    assert result.observation.provenance.source_ids == [
-        "CGWB_GWL_NOVEMBER_2022",
-        "CGWB_WQ_2020_STATION_COORDINATES",
-    ]
+    assert result.observation.provenance.source_ids == ["CGWB_BENGALURU_NAQUIM_2025"]
     assert result.observation.provenance.spatial_resolution is not None
 
 
@@ -78,13 +75,13 @@ def test_committed_groundwater_cache_passes_schema_and_source_validation() -> No
         / "cgwb_groundwater_observations.json"
     )
 
-    assert validate_cache(path, "groundwater") == 1
+    assert validate_cache(path, "groundwater") == 5
 
 
 def test_soil_cache_does_not_fabricate_infiltration_rate() -> None:
     result = NormalizedOfficialSoilProvider().lookup(bengaluru_location())
 
-    assert result.status is DataStatus.DATA_UNAVAILABLE
+    assert result.status is DataStatus.UNSUPPORTED_LOCATION
     assert result.information is None
     assert "field infiltration/percolation test" in result.message
 
@@ -144,12 +141,12 @@ def test_coordinate_resolves_regional_soil_without_fabricating_measurement(
 def test_hydrogeology_layers_fail_independently_and_explicitly() -> None:
     result = NormalizedOfficialHydrogeologyProvider().lookup(bengaluru_location())
 
-    assert result.status is DataStatus.DATA_UNAVAILABLE
+    assert result.status is DataStatus.UNSUPPORTED_LOCATION
     assert result.information is None
-    assert result.geology_status is DataStatus.DATA_UNAVAILABLE
-    assert result.geomorphology_status is DataStatus.DATA_UNAVAILABLE
-    assert result.aquifer_status is DataStatus.DATA_UNAVAILABLE
-    assert result.groundwater_prospect_status is DataStatus.DATA_UNAVAILABLE
+    assert result.geology_status is DataStatus.UNSUPPORTED_LOCATION
+    assert result.geomorphology_status is DataStatus.UNSUPPORTED_LOCATION
+    assert result.aquifer_status is DataStatus.UNSUPPORTED_LOCATION
+    assert result.groundwater_prospect_status is DataStatus.UNSUPPORTED_LOCATION
 
 
 def test_coordinate_resolves_only_hydrogeology_fields_present_in_source(
@@ -227,23 +224,22 @@ def test_coordinates_to_ar_environmental_profile_integration() -> None:
     assert profile.location.latitude == 12.9716
     assert profile.groundwater.status is DataStatus.DATA_STALE
     assert profile.groundwater.observation is not None
-    assert profile.groundwater.observation.station_id == "W125200077350001"
-    assert profile.soil.status is DataStatus.DATA_UNAVAILABLE
+    assert profile.groundwater.observation.station_id == "CGWB-KA-JAYANAGAR"
+    assert profile.soil.status is DataStatus.UNSUPPORTED_LOCATION
     assert profile.soil.information is None
-    assert profile.hydrogeology.geology_status is DataStatus.DATA_UNAVAILABLE
+    assert profile.hydrogeology.geology_status is DataStatus.UNSUPPORTED_LOCATION
 
     criteria = {
         criterion.criterion: criterion
         for criterion in result.artificialRecharge.criteria
     }
-    assert criteria["groundwater_observation"].result == "PASSED"
-    assert criteria["groundwater_observation"].observedValue == 3.0
+    assert criteria["groundwater_observation"].result == "REQUIRES_VERIFICATION"
+    assert criteria["groundwater_observation"].observedValue == 9.84
     assert criteria["infiltration_or_permeability"].result == "REQUIRES_VERIFICATION"
     assert criteria["hydrogeology_and_aquifer"].result == "INSUFFICIENT_DATA"
     assert result.artificialRecharge.feasibilityStatus == "INSUFFICIENT_DATA"
     assert result.artificialRecharge.recommendedStructure is None
-    assert "CGWB_GWL_NOVEMBER_2022" in result.artificialRecharge.sourceIds
-    assert "CGWB_WQ_2020_STATION_COORDINATES" in result.artificialRecharge.sourceIds
+    assert "CGWB_BENGALURU_NAQUIM_2025" in result.artificialRecharge.sourceIds
 
 
 def test_unresolved_location_skips_all_environmental_providers() -> None:

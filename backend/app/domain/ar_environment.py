@@ -40,7 +40,8 @@ class GroundwaterObservation(BaseModel):
         ge=0, alias="depthBelowGroundLevelM"
     )
     depth_unit: str = Field(alias="depthUnit")
-    observation_date: date = Field(alias="observationDate")
+    observation_date: date | None = Field(default=None, alias="observationDate")
+    observation_period: str | None = Field(default=None, alias="observationPeriod")
     season: str
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
