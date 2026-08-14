@@ -1,0 +1,18 @@
+{
+  "sourceId": "KSCST_RWH_TANK_WELL_SIZES",
+  "areaUnit": "square feet",
+  "wellDiameterUnit": "feet",
+  "wellDepthUnit": "feet",
+  "minimumWellDepthFt": 10,
+  "notes": "Reviewed subset transcribed from the published KSCST table. Rows not listed are unsupported; no interpolation is performed.",
+  "rows": [
+    {"plotAreaSqFt":600,"roofAreaSqFt":600,"openAreaSqFt":0,"designVolumeLitres":1100,"depth3FtDiameterFt":6,"depth4FtDiameterFt":3,"depth5FtDiameterFt":2},
+    {"plotAreaSqFt":1200,"roofAreaSqFt":1200,"openAreaSqFt":0,"designVolumeLitres":2200,"depth3FtDiameterFt":11,"depth4FtDiameterFt":6,"depth5FtDiameterFt":4},
+    {"plotAreaSqFt":1200,"roofAreaSqFt":1100,"openAreaSqFt":100,"designVolumeLitres":2100,"depth3FtDiameterFt":11,"depth4FtDiameterFt":6,"depth5FtDiameterFt":4},
+    {"plotAreaSqFt":2000,"roofAreaSqFt":2000,"openAreaSqFt":0,"designVolumeLitres":3700,"depth3FtDiameterFt":19,"depth4FtDiameterFt":11,"depth5FtDiameterFt":7},
+    {"plotAreaSqFt":2400,"roofAreaSqFt":2400,"openAreaSqFt":0,"designVolumeLitres":4500,"depth3FtDiameterFt":23,"depth4FtDiameterFt":13,"depth5FtDiameterFt":8},
+    {"plotAreaSqFt":3000,"roofAreaSqFt":3000,"openAreaSqFt":0,"designVolumeLitres":5600,"depth3FtDiameterFt":28,"depth4FtDiameterFt":16,"depth5FtDiameterFt":10},
+    {"plotAreaSqFt":3500,"roofAreaSqFt":3500,"openAreaSqFt":0,"designVolumeLitres":6500,"depth3FtDiameterFt":33,"depth4FtDiameterFt":19,"depth5FtDiameterFt":12},
+    {"plotAreaSqFt":4000,"roofAreaSqFt":4000,"openAreaSqFt":0,"designVolumeLitres":7400,"depth3FtDiameterFt":37,"depth4FtDiameterFt":21,"depth5FtDiameterFt":13}
+  ]
+}

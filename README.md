@@ -80,6 +80,10 @@ CI runs automatically on pushes and pull requests to `main`. Separate frontend a
 
 ## Engineering data and provenance
 
+Artificial recharge is currently validated end-to-end only for Hauz Khas, Delhi,
+and Jayanagar, Bengaluru. See [regional AR coverage](docs/ar-regional-coverage.md)
+for data sources, required field verification, and unsupported-location behavior.
+
 The source matrix and removed-assumption audit are in [`docs/engineering/source-audit.md`](docs/engineering/source-audit.md). The calculation/data model is documented in [`docs/engineering/proposed-model.md`](docs/engineering/proposed-model.md).
 
 The selected IMD product, committed normalized cache, provenance fields and guarded refresh command are documented in [`docs/engineering/rainfall-ingestion.md`](docs/engineering/rainfall-ingestion.md).
@@ -90,13 +94,13 @@ The selected IMD product, committed normalized cache, provenance fields and guar
 
 ```json
 {
-  "location": "Bengaluru",
+  "location": "Jayanagar, Bengaluru",
   "roofAreaM2": 120,
   "roofMaterial": "RCC",
-  "soilType": "SANDY_LOAM",
-  "groundwaterDepthM": 8,
   "availableGroundAreaM2": 15,
-  "monthlyRainwaterDemandLitres": 500
+  "monthlyRainwaterDemandLitres": 500,
+  "storageCapacityLitres": 5000,
+  "buildingHasBasement": false
 }
 ```
 
@@ -111,11 +115,10 @@ Other optional API fields support coordinate/administrative disambiguation (`lat
 values into these fields or presents an application-supplied value as user input.
 
 Environmental evidence for artificial recharge is resolved independently after
-location normalization. The bundled groundwater cache contains one stale CGWB
-Bengaluru Urban monitoring observation for exercising the source-traceable flow;
-it is labelled as a nearby observation, not a property measurement. Soil,
-infiltration, geology, geomorphology and aquifer fields remain explicitly unavailable
-until reviewed official features are imported. See
+location normalization. The intentionally limited production caches support the
+Hauz Khas and Jayanagar vertical slices with stale nearby CGWB observations and
+regional mapped evidence. They do not represent property measurements; infiltration,
+current groundwater, water quality and final well termination remain field checks. See
 `docs/engineering/environmental-data.md` for sources, cache refresh and limitations.
 
 The assessment response also contains an additive `environmentalData` summary with

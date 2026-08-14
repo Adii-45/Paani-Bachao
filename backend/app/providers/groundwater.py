@@ -108,7 +108,7 @@ class NormalizedCgwbGroundwaterProvider:
                     item.latitude,
                     item.longitude,
                 ),
-                -item.observation_date.toordinal(),
+                -(item.observation_date.toordinal() if item.observation_date else 0),
                 item.station_id,
             ),
         )

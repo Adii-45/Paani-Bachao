@@ -2,10 +2,11 @@ export type AssessmentInput = {
   location: string;
   roofAreaM2: number;
   roofMaterial: string;
-  soilType: string;
-  groundwaterDepthM: number;
+  soilType?: string | null;
+  groundwaterDepthM?: number | null;
   availableGroundAreaM2: number;
   monthlyRainwaterDemandLitres?: number;
+  storageCapacityLitres?: number;
   buildingHasBasement?: boolean;
   waterQualityStatus?: "NOT_VERIFIED" | "VERIFIED_ACCEPTABLE" | "UNSUITABLE";
   waterQualityEvidence?: string;
@@ -14,8 +15,9 @@ export type AssessmentInput = {
 export type AssessmentResult = {
   inputs: AssessmentInput;
   derived: {
-    locationStatus?: string;
-    normalizedLocation?: {
+    locationStatus: string;
+    normalizedLocation: {
+      input: string;
       canonicalName: string;
       latitude: number;
       longitude: number;
@@ -23,14 +25,21 @@ export type AssessmentResult = {
       district: string | null;
       state: string | null;
       postalCode?: string | null;
+      country: string;
       provider: string;
+      providerPlaceId?: string | null;
       confidence: string;
+      candidateCount?: number | null;
+      message: string;
     } | null;
     annualRainfallMm: number | null;
     rainfallSource: string | null;
     runoffCoefficient: number | null;
-    rainfallStatus?: string;
-    rainfall?: {
+    rainfallStatus: string;
+    rainfall: {
+      status?: string;
+      value?: number | null;
+      unit?: string;
       message: string;
       referencePeriod: string | null;
       spatialResolution: string | null;
@@ -38,28 +47,30 @@ export type AssessmentResult = {
       sourceUrl?: string | null;
       errorCode?: string | null;
     };
-    runoffCoefficientStatus?: string;
-    runoffCoefficientEvidence?: { message: string };
+    runoffCoefficientStatus: string;
+    runoffCoefficientEvidence: { message: string };
   };
   rtrwh: {
     potentialLitresPerYear: number | null;
     recommendedSizeLitres: number | null;
     sizingMessage: string | null;
-    calculationStatus?: string;
-    sizingStatus?: string;
-    sizingMethodId?: string;
-    sizingMissingInputs?: string[];
-    sizingSourceIds?: string[];
-    sizingDesignPeriod?: string;
-    sizingRainfallResolution?: string | null;
-    sizingRainfallReferencePeriod?: string | null;
-    demandUsedLitresPerMonth?: number | null;
-    estimatedSupplyLitres?: number | null;
-    estimatedOverflowLitres?: number | null;
-    demandMetPercent?: number | null;
-    depletionMonths?: number[];
-    sizingAssumptions?: string[];
-    storagePeriods?: Array<{
+    calculationStatus: string;
+    sizingStatus: string;
+    sizingMethodId: string;
+    sizingMissingInputs: string[];
+    sizingSourceIds: string[];
+    sizingDesignPeriod: string;
+    sizingRainfallResolution: string | null;
+    sizingRainfallReferencePeriod: string | null;
+    sizingRainfallSourceUrls: string[];
+    sizingRainfallSourceRecords: string[];
+    demandUsedLitresPerMonth: number | null;
+    estimatedSupplyLitres: number | null;
+    estimatedOverflowLitres: number | null;
+    demandMetPercent: number | null;
+    depletionMonths: number[];
+    sizingAssumptions: string[];
+    storagePeriods: Array<{
       month: number;
       rainfallMm: number;
       inflowLitres: number;
@@ -72,13 +83,12 @@ export type AssessmentResult = {
     }>;
   };
   artificialRecharge: {
-    potential: string | null;
     potentialRechargeLitresPerYear: number | null;
     recommendedStructure: { type: string; displayName: string } | null;
-    dimensions: Record<string, string | number> | null;
+    dimensions: Record<string, unknown> | null;
     message: string | null;
-    feasibilityStatus?: string;
-    criteria?: Array<{
+    feasibilityStatus: string;
+    criteria: Array<{
       criterion: string;
       result: string;
       observedValue: string | number | null;
@@ -86,38 +96,40 @@ export type AssessmentResult = {
       reason: string;
       sourceIds: string[];
     }>;
-    reasons?: string[];
-    quantityStatus?: string;
-    quantityMethodId?: string;
-    annualHarvestLitres?: number | null;
-    annualDemandSuppliedLitres?: number | null;
-    annualOverflowLitres?: number | null;
-    catchmentLossesLitres?: number | null;
-    endingStorageLitres?: number | null;
-    quantityAssumptions?: string[];
-    conditionsPassed?: string[];
-    conditionsFailed?: string[];
-    conditionsRequiringVerification?: string[];
-    missingData?: string[];
-    fieldTestsRecommended?: string[];
-    structureSelectionStatus?: string;
-    alternativeStructures?: string[];
-    selectionReasons?: string[];
-    rejectedStructures?: Array<{
+    reasons: string[];
+    quantityStatus: string;
+    quantityMethodId: string;
+    annualHarvestLitres: number | null;
+    annualDemandSuppliedLitres: number | null;
+    annualOverflowLitres: number | null;
+    catchmentLossesLitres: number | null;
+    endingStorageLitres: number | null;
+    quantityAssumptions: string[];
+    quantityMissingInputs: string[];
+    conditionsPassed: string[];
+    conditionsFailed: string[];
+    conditionsRequiringVerification: string[];
+    missingData: string[];
+    fieldTestsRecommended: string[];
+    structureSelectionStatus: string;
+    alternativeStructures: string[];
+    selectionReasons: string[];
+    rejectedStructures: Array<{
       structure: string;
       reason: string;
       sourceIds: string[];
     }>;
-    structureMissingInputs?: string[];
-    sizingStatus?: string;
-    sizingMethodId?: string;
-    requiredFootprintM2?: number | null;
-    filterMedia?: string[];
-    sizingDesignInputs?: Record<string, string | number>;
-    sizingAssumptions?: string[];
-    fieldVerificationRequired?: string[];
-    sizingMissingInputs?: string[];
-    environmentalProfile?: {
+    structureMissingInputs: string[];
+    sizingStatus: string;
+    sizingMethodId: string;
+    requiredFootprintM2: number | null;
+    filterMedia: string[];
+    sizingDesignInputs: Record<string, unknown>;
+    sizingAssumptions: string[];
+    fieldVerificationRequired: string[];
+    sizingMissingInputs: string[];
+    sourceIds: string[];
+    environmentalProfile: {
       assembledAt: string;
       location: {
         canonicalName: string;
@@ -135,7 +147,8 @@ export type AssessmentResult = {
           stationName: string;
           depthBelowGroundLevelM: number;
           depthUnit: string;
-          observationDate: string;
+          observationDate: string | null;
+          observationPeriod?: string | null;
           season: string;
           distanceFromPropertyM: number | null;
           spatialResolution: string;
@@ -149,6 +162,7 @@ export type AssessmentResult = {
           soilTexture: string | null;
           measuredInfiltrationRateMmPerHr: number | null;
           infiltrationDataType: string;
+          spatialResolution: string;
           fieldTestRecommended: boolean;
         } | null;
       };
@@ -165,6 +179,9 @@ export type AssessmentResult = {
           geomorphology: string | null;
           groundwaterProspect: string | null;
           aquiferType: string | null;
+          aquiferDepth: string | null;
+          aquiferThickness: string | null;
+          spatialResolution: string;
         } | null;
       };
     } | null;
@@ -179,14 +196,14 @@ export type AssessmentResult = {
     roofAreaM2: number;
     annualRainfallMm: number | null;
     runoffCoefficient: number | null;
-    methodId?: string;
-    grossRainfallVolumeLitres?: number | null;
-    estimatedLossesLitres?: number | null;
-    harvestableVolumeLitres?: number | null;
-    sourceIds?: string[];
-    assumptions?: string[];
+    methodId: string;
+    grossRainfallVolumeLitres: number | null;
+    estimatedLossesLitres: number | null;
+    harvestableVolumeLitres: number | null;
+    sourceIds: string[];
+    assumptions: string[];
   };
-  environmentalData?: {
+  environmentalData: {
     locationStatus: string;
     rainfall: EnvironmentalProviderEvidence;
     groundwater: EnvironmentalProviderEvidence;
@@ -194,7 +211,7 @@ export type AssessmentResult = {
     hydrogeology: EnvironmentalProviderEvidence;
   };
   warnings: string[];
-  sources?: Array<{
+  sources: Array<{
     sourceId: string;
     authority: string;
     documentTitle: string;

@@ -230,6 +230,39 @@
       "source_url": "https://gis.nwic.in/server/rest/services/NWIC/AquiferSystems_GSI/FeatureServer/layers",
       "accessed_at": "2026-08-13",
       "notes": "Official polygon service exposes separate Principal Aquifers and Major Aquifers layers. Published fields include source object ID, aquifer labels and separately named aquifer-characteristic fields. Import mapping must preserve those meanings; no value is used until a reviewed feature intersecting the property coordinate is imported."
+    },
+    {
+      "source_id": "CGWB_DELHI_GWYB_2024_25",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "Ground Water Year Book, NCT Delhi 2024-25",
+      "document_version_or_year": "2024-25",
+      "section": "Monitoring-station table and hydrogeological zones",
+      "page": "station and zonation tables",
+      "source_url": "https://cgwb.gov.in/cgwbpnm/download/2007",
+      "accessed_at": "2026-08-14",
+      "notes": "Supplies seasonal depth-to-water observations and regional alluvial/bedrock zonation. Observations are nearby points, not property measurements."
+    },
+    {
+      "source_id": "CGWB_BENGALURU_NAQUIM_2025",
+      "authority": "Central Ground Water Board (CGWB)",
+      "document_title": "NAQUIM 2.0 Bengaluru Urban Area",
+      "document_version_or_year": "2024-25, published 2025",
+      "section": "Aquifer disposition, soils, monitoring wells and urban-core recharge measures",
+      "page": "Tables 27 and 34; Annexure 6",
+      "source_url": "https://cgwb.gov.in/cgwbpnm/download/1957",
+      "accessed_at": "2026-08-14",
+      "notes": "Regional evidence only. The report's AHP priority scoring is deliberately not used by the application. Site infiltration and final well intake require field verification."
+    },
+    {
+      "source_id": "KSCST_RWH_TANK_WELL_SIZES",
+      "authority": "Karnataka State Council for Science and Technology (KSCST)",
+      "document_title": "RWH Tank or Ground Water Recharge Well Sizes for Residential Sites",
+      "document_version_or_year": "current published table at access date",
+      "section": "Residential roof/open-area table",
+      "page": null,
+      "source_url": "https://kscst.org.in/rwh_files/pdf/RWH_Tank_and_Well_Sizes.pdf",
+      "accessed_at": "2026-08-14",
+      "notes": "Provides square-foot plot/roof/open-area rows, tank/well volume in litres, and 3/4/5 ft diameter well-depth columns with a published 10 ft minimum. The application uses reviewed exact rows only and converts units mathematically; it does not establish final aquifer intake depth."
     }
   ]
 }

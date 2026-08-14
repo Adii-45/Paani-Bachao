@@ -49,10 +49,14 @@ produce named verification requirements rather than inferred values.
 
 ## Structure selection and sizing
 
-Method ID: `CGWB_DELHI_STANDARD_RTRWH_DESIGNS`
+Installed regional methods:
 
-The only installed structure method is CGWB's *Standard Designs for Adoption of Roof
-Top Rainwater Harvesting in Delhi*. It is not generalized outside NCT Delhi.
+- `CGWB_DELHI_STANDARD_RTRWH_DESIGNS`, applied only where an intersecting reviewed
+  Hauz Khas regional record identifies the Delhi methodology; and
+- `KSCST_RESIDENTIAL_RWH_WELL_TABLE`, applied only where the intersecting reviewed
+  Jayanagar record identifies the Bengaluru methodology.
+
+Neither method is selected from a city name alone.
 
 - A trench without recharge well is considered only for alluvial formation, a
   post-monsoon groundwater depth greater than 5 m and up to 15 m below ground level,
@@ -71,13 +75,17 @@ Top Rainwater Harvesting in Delhi*. It is not generalized outside NCT Delhi.
 
 CGWB explicitly describes the designs as indicative and dependent on site conditions.
 The response therefore includes filter media, assumptions and mandatory field checks.
-Locations outside Delhi return `UNSUPPORTED_LOCATION_FOR_SELECTION`; they do not receive
-a Delhi-derived structure or dimensions.
+For Jayanagar, KSCST exact published square-foot rows provide design volume and
+3/4/5-foot diameter geometric well-depth options. Square feet and feet are converted
+separately to square metres and metres. There is no interpolation or extrapolation.
+The geometric table depth is not the final drilled or aquifer-intake depth, which
+remains null pending field investigation.
 
 ## Data limitations
 
-The committed production soil and hydrogeology caches currently contain no reviewed
-coordinate-level records. Consequently, ordinary runtime assessments remain
-`INSUFFICIENT_DATA` for AR even when a storage overflow exists. The deterministic full
-integration test injects source-shaped environmental fixtures to verify the complete
-software path; it is not evidence that national environmental coverage is installed.
+The production caches intentionally support only Hauz Khas and Jayanagar end to end.
+Both groundwater observations are stale, Hauz Khas lacks regional soil evidence, and
+neither site has a property infiltration test or verified water-quality result.
+Consequently, production recommendations remain conditional/indicative and never
+construction-ready. Coordinates outside the reviewed polygons return an unsupported
+or insufficient result rather than receiving a regional rule.

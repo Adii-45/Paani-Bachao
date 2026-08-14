@@ -31,10 +31,13 @@ a value for another provider.
 ## Groundwater
 
 - Parameter: depth to water level, metres below ground level (`m bgl`).
-- Observation source: CGWB, *November ground water level data 1994–2023*, station measurement dated 5 November 2022.
-- Station-coordinate source: CGWB, *Ground Water Quality Data 2020*, Karnataka row 2767.
+- Observation sources: CGWB, *Ground Water Year Book, NCT Delhi 2024-25*, and
+  CGWB, *NAQUIM 2.0 Bengaluru Urban Area* (2024-25).
 - Cache: `backend/app/data/normalized/cgwb_groundwater_observations.json`.
-- Current coverage: one cross-checked Bengaluru Urban station (`W125200077350001`, Jayanagar).
+- Current cache: five reviewed November 2024 monitoring records. The completed
+  vertical slices use the Hauz Khas piezometer and Jayanagar monitoring well;
+  three Greater Kailash II records are retained as reviewed partial evidence but do
+  not create end-to-end AR support without rainfall coverage.
 - Ingestion: join a reviewed CGWB/India-WRIS water-level CSV to a reviewed official
   station-coordinate CSV by station ID using
   `scripts/ingest_cgwb_groundwater.py`. The importer rejects missing depth,
@@ -67,12 +70,12 @@ separate operator step.
 
 ## Soil and infiltration
 
-NWIC publishes the `Soil_1New` ArcGIS service at
-`https://gis.nwic.in/server/rest/services/SubInfoSysLCC/Soil_1New/MapServer`.
-The service advertises map/query capability and GeoJSON support, but its soil
-sublayer schema/features were not reliably retrievable during implementation. The
-committed production cache therefore still has zero records and returns
-`DATA_UNAVAILABLE`; it does not contain synthetic polygons.
+The committed production cache contains one reviewed CGWB NAQUIM regional soil
+description constrained to the Jayanagar coverage polygon. Hauz Khas has no imported
+soil feature. The Jayanagar record is explicitly `REGIONAL_SOIL_PROXY`, has a null
+measured infiltration rate and always requires a property field test. NWIC's
+`Soil_1New` service remains registered as a future source family but is not used to
+fill missing values.
 
 `scripts/ingest_nwic_soil.py` normalizes a separately acquired and reviewed official
 WGS 84 GeoJSON polygon export. The operator must explicitly provide the source-field
@@ -153,12 +156,12 @@ cd backend
   --confirm-official-source
 ```
 
-Service metadata is not a site attribute. The official endpoint did not return a
-reviewable feature export during this implementation run, so the committed production
-cache still has zero records. Geology, geomorphology, groundwater prospects and
-aquifer status remain explicitly unavailable at runtime until reviewed source polygons
-are imported. No value is inferred from the user's soil label or groundwater
-observation.
+Service metadata is not a site attribute. The committed cache contains three reviewed
+regional CGWB report interpretations constrained to the Hauz Khas, Greater Kailash II
+and Jayanagar coverage polygons. Geology and aquifer context are present for those
+polygons; geomorphology and groundwater-prospect attributes remain null because the
+reviewed records do not support them. Greater Kailash II remains only partially
+covered. No value is inferred from a homeowner input.
 
 ## Cache validation
 
@@ -208,11 +211,13 @@ These providers supply environmental evidence to the later recharge engine. The 
   geocoding and remain labelled as user-provided coordinates.
 - Rainfall is looked up by coordinate against the 696 imported IMD district-normal
   polygons. A missing polygon prevents the RTRWH calculation.
-- The bundled groundwater cache has one stale nearby observation. Other districts
-  remain unsupported; no district or national default is substituted.
-- The committed soil and hydrogeology caches are intentionally empty pending reviewed
-  official feature exports. Their providers return unavailable rather than using the
-  homeowner's soil selection or inferring subsurface attributes.
+- The bundled groundwater cache is stale. Nearby observations remain visible with
+  distance and date/period metadata, but force current field confirmation.
+- End-to-end AR is validated only for Hauz Khas and Jayanagar. Regional methodology
+  IDs come only from an intersecting reviewed hydrogeology polygon. Other coordinates
+  cannot borrow Delhi or Bengaluru rules from a city/state name.
+- Missing soil, geomorphology or groundwater-prospect attributes remain unavailable;
+  regional soil is never converted to a measured infiltration rate.
 - Provider/cache failures are isolated and returned as `PROVIDER_UNAVAILABLE`. An
   unresolved location prevents all four environmental lookups.
 

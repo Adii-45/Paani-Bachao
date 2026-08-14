@@ -11,10 +11,17 @@ import { SERVER_SNAPSHOT, useSessionValue } from "@/lib/session";
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
 const value = (amount: number | null, suffix = "") => amount === null ? "Unavailable" : `${number.format(amount)}${suffix}`;
 
-function Dimensions({ dimensions }: { dimensions: Record<string, string | number> | null }) {
+function Dimensions({ dimensions }: { dimensions: Record<string, unknown> | null }) {
   if (!dimensions) return <>Unavailable</>;
-  const ordered = ["lengthM", "widthM", "depthM", "diameterM"].filter((key) => key in dimensions);
-  return <>{ordered.map((key) => `${dimensions[key]} m`).join(" × ")}</>;
+  const groups = [
+    { label: "Trench", keys: ["trenchLengthM", "trenchWidthM", "trenchDepthM"] },
+    { label: "Surface chamber", keys: ["chamberLengthM", "chamberWidthM", "chamberDepthM"] },
+  ];
+  const group = groups.find(({ keys }) => keys.every((key) => key in dimensions));
+  if (group) return <>{group.label}: {group.keys.map((key) => `${dimensions[key]} m`).join(" × ")}</>;
+  const options = Array.isArray(dimensions.wellOptions) ? dimensions.wellOptions as Array<{diameterM: number; minimumDesignDepthM: number}> : [];
+  if (options.length) return <>{options.map((option) => `${option.diameterM} m diameter × ${option.minimumDesignDepthM} m published minimum geometric depth`).join("; ")}</>;
+  return <>Partial dimensions available in the engineering details</>;
 }
 
 function MetricValue({ amount, unit }: { amount: number | null; unit: string }) {
@@ -59,8 +66,11 @@ export default function ResultPage() {
 
   const input = result.inputs;
   const arMessage = result.artificialRecharge.message;
-  const rechargeStatus = result.artificialRecharge.feasibilityStatus ?? result.artificialRecharge.potential;
+  const rechargeStatus = result.artificialRecharge.feasibilityStatus;
   const environmental = result.artificialRecharge.environmentalProfile;
+  const waterQualityCriterion = result.artificialRecharge.criteria.find(
+    (criterion) => criterion.criterion === "water_quality_and_contamination_risk",
+  );
 
   return (
     <main className="page-main results-main">
@@ -103,12 +113,9 @@ export default function ResultPage() {
             )}
             <div><dt>Roof Area</dt><dd>{input.roofAreaM2} m²</dd></div>
             <div><dt>Roof Material</dt><dd>{displayLabel(input.roofMaterial)}</dd></div>
-            <div><dt>Soil Type</dt><dd>{displayLabel(input.soilType)}</dd></div>
-            <div><dt>User-provided Groundwater Depth</dt><dd>{input.groundwaterDepthM} metres below ground level</dd></div>
             <div><dt>Available Ground Area</dt><dd>{input.availableGroundAreaM2} m²</dd></div>
+            {input.storageCapacityLitres != null && <div><dt>Tank Capacity Used for Recharge Water Balance</dt><dd>{input.storageCapacityLitres} litres</dd></div>}
             <div><dt>Building Basement</dt><dd>{input.buildingHasBasement === undefined ? "Not provided" : input.buildingHasBasement ? "Yes" : "No"}</dd></div>
-            <div><dt>Recharge Water Quality</dt><dd>{displayLabel(input.waterQualityStatus ?? "NOT_VERIFIED")}</dd></div>
-            {input.waterQualityEvidence && <div><dt>User-provided Water Quality Evidence</dt><dd>{input.waterQualityEvidence}</dd></div>}
           </dl>
         </ResultSection>
 
@@ -197,10 +204,12 @@ export default function ResultPage() {
             <p className="section-note">This is a preliminary on-spot assessment and does not replace site-specific hydrogeological investigation.</p>
           </ResultSection>
 
-          <ResultSection title="Recommended AR Structure" eyebrow="Indicative recommendation">
+          <ResultSection title="AR Structure Assessment" eyebrow="Conditional, indicative result">
             <div className="structure-summary">
-              <div><span>Structure type</span><strong>{result.artificialRecharge.recommendedStructure?.displayName ?? "Unavailable"}</strong></div>
-              <div><span>Approximate dimensions</span><strong><Dimensions dimensions={result.artificialRecharge.dimensions} /></strong></div>
+              <div><span>Selection status</span><strong>{displayLabel(result.artificialRecharge.structureSelectionStatus ?? null)}</strong></div>
+              <div><span>Structure option</span><strong>{result.artificialRecharge.recommendedStructure?.displayName ?? "Unavailable"}</strong></div>
+              <div><span>Sizing status</span><strong>{displayLabel(result.artificialRecharge.sizingStatus ?? null)}</strong></div>
+              <div><span>Published indicative dimensions</span><strong><Dimensions dimensions={result.artificialRecharge.dimensions} /></strong></div>
               {result.artificialRecharge.requiredFootprintM2 != null && <div><span>Internal footprint</span><strong>{result.artificialRecharge.requiredFootprintM2} m²</strong></div>}
             </div>
             {result.artificialRecharge.selectionReasons && result.artificialRecharge.selectionReasons.length > 0 && (
@@ -208,6 +217,13 @@ export default function ResultPage() {
             )}
             {result.artificialRecharge.rejectedStructures && result.artificialRecharge.rejectedStructures.length > 0 && (
               <details className="calculation-details"><summary>Rejected alternatives</summary><div><ul>{result.artificialRecharge.rejectedStructures.map((item) => <li key={`${item.structure}-${item.reason}`}><strong>{displayLabel(item.structure)}:</strong> {item.reason}</li>)}</ul></div></details>
+            )}
+            {result.artificialRecharge.alternativeStructures && result.artificialRecharge.alternativeStructures.length > 0 && (
+              <div className="section-note">
+                <strong>Other conditionally feasible options</strong>
+                <ul>{result.artificialRecharge.alternativeStructures.map((structure) => <li key={structure}>{displayLabel(structure)}</li>)}</ul>
+                <p>Final selection requires the stated field verification.</p>
+              </div>
             )}
             {result.artificialRecharge.filterMedia && result.artificialRecharge.filterMedia.length > 0 && (
               <details className="calculation-details"><summary>Filter and media requirements</summary><div><ul>{result.artificialRecharge.filterMedia.map((item) => <li key={item}>{item}</li>)}</ul></div></details>
@@ -233,19 +249,24 @@ export default function ResultPage() {
                 </dd>
               </div>
               <div><dt>Groundwater data quality</dt><dd>{displayLabel(environmental.groundwater.status)}</dd></div>
-              <div><dt>Soil / infiltration</dt><dd>{environmental.soil.information?.soilTexture ?? environmental.soil.information?.soilClass ?? displayLabel(environmental.soil.status)}</dd></div>
-              <div><dt>Geology</dt><dd>{environmental.hydrogeology.information?.geology ?? displayLabel(environmental.hydrogeology.geologyStatus)}</dd></div>
-              <div><dt>Geomorphology</dt><dd>{environmental.hydrogeology.information?.geomorphology ?? displayLabel(environmental.hydrogeology.geomorphologyStatus)}</dd></div>
-              <div><dt>Aquifer / prospects</dt><dd>{environmental.hydrogeology.information?.aquiferType ?? environmental.hydrogeology.information?.groundwaterProspect ?? displayLabel(environmental.hydrogeology.aquiferStatus)}</dd></div>
+              <div><dt>Regional soil / infiltration proxy</dt><dd>{environmental.soil.information?.soilTexture ?? environmental.soil.information?.soilClass ?? displayLabel(environmental.soil.status)}</dd></div>
+              <div><dt>Regional geology</dt><dd>{environmental.hydrogeology.information?.geology ?? displayLabel(environmental.hydrogeology.geologyStatus)}</dd></div>
+              <div><dt>Regional geomorphology</dt><dd>{environmental.hydrogeology.information?.geomorphology ?? displayLabel(environmental.hydrogeology.geomorphologyStatus)}</dd></div>
+              <div><dt>Regional aquifer / prospects</dt><dd>{environmental.hydrogeology.information?.aquiferType ?? environmental.hydrogeology.information?.groundwaterProspect ?? displayLabel(environmental.hydrogeology.aquiferStatus)}</dd></div>
+              <div><dt>Water-quality verification</dt><dd>{waterQualityCriterion ? displayLabel(waterQualityCriterion.result) : "Unavailable"}</dd></div>
             </dl>
             {environmental.groundwater.observation && (
               <p className="section-note">
-                Observation date: {environmental.groundwater.observation.observationDate}; approximate distance from property: {value(environmental.groundwater.observation.distanceFromPropertyM, " m")}. This nearby observation is not the exact water level at the property.
+                Observation period: {environmental.groundwater.observation.observationDate ?? environmental.groundwater.observation.observationPeriod ?? "Not specified"}; approximate distance from property: {value(environmental.groundwater.observation.distanceFromPropertyM, " m")}. This nearby observation is not the exact water level at the property.
               </p>
             )}
             {result.artificialRecharge.fieldTestsRecommended && result.artificialRecharge.fieldTestsRecommended.length > 0 && (
               <InfoNotice title="Site tests required" tone="warning"><ul>{result.artificialRecharge.fieldTestsRecommended.map((item) => <li key={item}>{item}</li>)}</ul></InfoNotice>
             )}
+            {environmental.soil.information && (
+              <p className="section-note">The displayed soil is regional mapped evidence. Measured property infiltration: {environmental.soil.information.measuredInfiltrationRateMmPerHr == null ? "not available" : `${environmental.soil.information.measuredInfiltrationRateMmPerHr} mm/hour`}.</p>
+            )}
+            {waterQualityCriterion && <p className="section-note">{waterQualityCriterion.reason}</p>}
             <p className="section-note">{environmental.soil.message}</p>
             <p className="section-note">{environmental.hydrogeology.message}</p>
           </ResultSection>

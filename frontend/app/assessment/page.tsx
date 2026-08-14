@@ -51,19 +51,17 @@ export default function AssessmentPage() {
     setError("");
     const form = new FormData(event.currentTarget);
     const monthlyDemand = String(form.get("monthlyRainwaterDemandLitres") ?? "").trim();
+    const storageCapacity = String(form.get("storageCapacityLitres") ?? "").trim();
     const basement = String(form.get("buildingHasBasement") ?? "").trim();
-    const waterQualityEvidence = String(form.get("waterQualityEvidence") ?? "").trim();
     const payload = {
       location: form.get("location"),
       roofAreaM2: Number(form.get("roofAreaM2")),
       roofMaterial: form.get("roofMaterial"),
-      soilType: form.get("soilType"),
-      groundwaterDepthM: Number(form.get("groundwaterDepthM")),
       availableGroundAreaM2: Number(form.get("availableGroundAreaM2")),
       monthlyRainwaterDemandLitres: monthlyDemand ? Number(monthlyDemand) : undefined,
+      storageCapacityLitres: storageCapacity ? Number(storageCapacity) : undefined,
       buildingHasBasement: basement ? basement === "true" : undefined,
-      waterQualityStatus: form.get("waterQualityStatus") || "NOT_VERIFIED",
-      waterQualityEvidence: waterQualityEvidence || undefined,
+      waterQualityStatus: "NOT_VERIFIED",
     };
 
     try {
@@ -118,8 +116,11 @@ export default function AssessmentPage() {
                   <option value="" disabled>Select roof material</option><option value="RCC">RCC / Concrete</option><option value="TILES">Tiles</option><option value="METAL">GI sheet (galvanized iron)</option><option value="OTHER">Other</option><option value="DONT_KNOW">Don&apos;t know</option>
                 </select>
               </FormField>
-              <FormField id="monthlyRainwaterDemandLitres" label="Planned Monthly Rainwater Use" helper="Optional. Enter how many litres you plan to draw from the tank each month; required for tank sizing." className="field-wide">
+              <FormField id="monthlyRainwaterDemandLitres" label="Planned Monthly Rainwater Use" helper="Optional. Enter how many litres you plan to draw from the tank each month; required for tank sizing." className="field-wide" required={false}>
                 <div className="control-with-unit"><input id="monthlyRainwaterDemandLitres" name="monthlyRainwaterDemandLitres" type="number" min="0.1" max="10000000" step="0.1" defaultValue={savedInputs?.monthlyRainwaterDemandLitres ?? ""} placeholder="Enter planned rainwater use per month" aria-describedby="monthlyRainwaterDemandLitres-help" /><span>litres/month</span></div>
+              </FormField>
+              <FormField id="storageCapacityLitres" label="Existing or Planned Tank Capacity" helper="Optional. Used with monthly rainfall and demand to calculate the overflow physically available for recharge." className="field-wide" required={false}>
+                <div className="control-with-unit"><input id="storageCapacityLitres" name="storageCapacityLitres" type="number" min="0.1" max="10000000" step="0.1" defaultValue={savedInputs?.storageCapacityLitres ?? ""} placeholder="Enter tank capacity if known" aria-describedby="storageCapacityLitres-help" /><span>litres</span></div>
               </FormField>
             </div>
           </div>
@@ -129,32 +130,19 @@ export default function AssessmentPage() {
               <span>2</span>
               <div><h2>Ground and recharge details</h2><p>Basic site conditions used for the preliminary recharge assessment.</p></div>
             </header>
-            <div className="form-grid form-grid-three">
-              <FormField id="soilType" label="Soil Type" helper="Select “Don't know” if you are unsure.">
-                <select id="soilType" name="soilType" required defaultValue={savedInputs?.soilType ?? ""} aria-describedby="soilType-help">
-                  <option value="" disabled>Select soil type</option><option value="SANDY">Sandy</option><option value="SANDY_LOAM">Sandy Loam</option><option value="LOAM">Loam</option><option value="CLAYEY">Clayey</option><option value="ROCKY">Rocky</option><option value="DONT_KNOW">Don&apos;t know</option>
-                </select>
-              </FormField>
-              <FormField id="groundwaterDepthM" label="Groundwater Depth" helper="Approximate depth from ground surface to groundwater level.">
-                <div className="control-with-unit"><input id="groundwaterDepthM" name="groundwaterDepthM" type="number" min="0" max="1000" step="0.1" required defaultValue={savedInputs?.groundwaterDepthM ?? ""} placeholder="Enter depth in metres below ground level" aria-describedby="groundwaterDepthM-help" /><span>metres</span></div>
-              </FormField>
+            <div className="form-grid">
               <FormField id="availableGroundAreaM2" label="Available Ground Area" helper="Open area that could accommodate a recharge structure.">
                 <div className="control-with-unit"><input id="availableGroundAreaM2" name="availableGroundAreaM2" type="number" min="0" max="100000" step="0.1" required defaultValue={savedInputs?.availableGroundAreaM2 ?? ""} placeholder="Enter available open area in square metres" aria-describedby="availableGroundAreaM2-help" /><span>m²</span></div>
               </FormField>
-              <FormField id="buildingHasBasement" label="Building Basement" helper="Some source-backed recharge designs do not apply to buildings with basements.">
+              <FormField id="buildingHasBasement" label="Building Basement" helper="Optional. Some source-backed Delhi recharge designs do not apply to buildings with basements." required={false}>
                 <select id="buildingHasBasement" name="buildingHasBasement" defaultValue={savedInputs?.buildingHasBasement === undefined ? "" : String(savedInputs.buildingHasBasement)} aria-describedby="buildingHasBasement-help">
                   <option value="">Select if known</option><option value="false">No basement</option><option value="true">Has a basement</option>
                 </select>
               </FormField>
-              <FormField id="waterQualityStatus" label="Recharge Water Quality Review" helper="Do not mark acceptable unless a qualified test or review supports it.">
-                <select id="waterQualityStatus" name="waterQualityStatus" defaultValue={savedInputs?.waterQualityStatus ?? "NOT_VERIFIED"} aria-describedby="waterQualityStatus-help">
-                  <option value="NOT_VERIFIED">Not yet verified</option><option value="VERIFIED_ACCEPTABLE">Reviewed as acceptable</option><option value="UNSUITABLE">Review found unsuitable</option>
-                </select>
-              </FormField>
-              <FormField id="waterQualityEvidence" label="Water Quality Evidence" helper="Required only when recording a reviewed conclusion; enter the report, reviewer or source reference.">
-                <input id="waterQualityEvidence" name="waterQualityEvidence" type="text" maxLength={300} defaultValue={savedInputs?.waterQualityEvidence ?? ""} placeholder="Enter report or review reference if applicable" aria-describedby="waterQualityEvidence-help" />
-              </FormField>
             </div>
+            <InfoNotice title="Environmental information is resolved automatically">
+              <p>Groundwater, regional soil and hydrogeology are looked up from the resolved location where reviewed data are installed. Water quality and property infiltration remain field-verification requirements; the form does not ask homeowners to guess them.</p>
+            </InfoNotice>
           </div>
 
           {error && <InfoNotice title="Assessment could not be completed" tone="error" className="form-message"><p>{error}</p></InfoNotice>}

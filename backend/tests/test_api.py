@@ -63,12 +63,12 @@ def test_assessment_endpoint_returns_evidence_aware_contract(
     assert body["environmentalData"]["rainfall"]["status"] == "DATA_AVAILABLE"
     assert body["environmentalData"]["rainfall"]["evidenceAvailable"] is True
     assert body["environmentalData"]["groundwater"]["status"] == "DATA_STALE"
-    assert body["environmentalData"]["soil"]["status"] == "DATA_UNAVAILABLE"
+    assert body["environmentalData"]["soil"]["status"] == "UNSUPPORTED_LOCATION"
     assert body["environmentalData"]["hydrogeology"]["componentStatuses"] == {
-        "geology": "DATA_UNAVAILABLE",
-        "geomorphology": "DATA_UNAVAILABLE",
-        "aquifer": "DATA_UNAVAILABLE",
-        "groundwaterProspect": "DATA_UNAVAILABLE",
+        "geology": "UNSUPPORTED_LOCATION",
+        "geomorphology": "UNSUPPORTED_LOCATION",
+        "aquifer": "UNSUPPORTED_LOCATION",
+        "groundwaterProspect": "UNSUPPORTED_LOCATION",
     }
     assert body["ruleset"] == "SOURCE_BACKED"
     assert body["isDemoData"] is False
@@ -94,6 +94,7 @@ def test_assessment_endpoint_returns_evidence_aware_contract(
         ("longitude", -181),
         ("monthlyRainwaterDemandLitres", 0),
         ("monthlyRainwaterDemandLitres", -1),
+        ("storageCapacityLitres", 0),
     ],
 )
 def test_invalid_field_values_return_validation_errors(
@@ -112,8 +113,6 @@ def test_invalid_field_values_return_validation_errors(
         "location",
         "roofAreaM2",
         "roofMaterial",
-        "soilType",
-        "groundwaterDepthM",
         "availableGroundAreaM2",
     ],
 )

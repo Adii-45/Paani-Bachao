@@ -39,10 +39,13 @@ class AssessmentRequest(BaseModel):
     location: str = Field(min_length=1, max_length=120)
     roofAreaM2: float = Field(gt=0, le=100_000)
     roofMaterial: RoofMaterial
-    soilType: SoilType
-    groundwaterDepthM: float = Field(ge=0, le=1_000)
+    # Retained as optional API compatibility/field-officer inputs. The homeowner
+    # UI uses source-backed providers and does not ask users to guess these values.
+    soilType: SoilType | None = None
+    groundwaterDepthM: float | None = Field(default=None, ge=0, le=1_000)
     availableGroundAreaM2: float = Field(ge=0, le=100_000)
     monthlyRainwaterDemandLitres: float | None = Field(default=None, gt=0, le=10_000_000)
+    storageCapacityLitres: float | None = Field(default=None, gt=0, le=10_000_000)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     state: str | None = Field(default=None, max_length=120)
@@ -169,7 +172,6 @@ class StructureRecommendation(BaseModel):
 
 
 class ArtificialRechargeResult(BaseModel):
-    potential: str | None
     potentialRechargeLitresPerYear: float | None
     recommendedStructure: StructureRecommendation | None
     dimensions: dict[str, Any] | None

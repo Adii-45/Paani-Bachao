@@ -132,7 +132,10 @@ harvestable rooftop runoff
 = water potentially available for recharge
 ```
 
-No loss or allocation percentage is assumed. Because the current request does not provide a complete allocation plan, `potentialRechargeLitresPerYear` is unavailable rather than being derived from a soil label.
+No loss or allocation percentage is assumed. When the user supplies monthly demand
+and an actual/planned tank capacity, `potentialRechargeLitresPerYear` is the sum of
+finite-tank monthly overflow. If either is missing, it remains unavailable rather than
+being derived from a soil label.
 
 ## Recharge feasibility
 
@@ -152,13 +155,20 @@ The initial implementation checks data sufficiency, not invented numeric thresho
 - groundwater/source-water quality and contamination-risk review;
 - site constraints and available footprint.
 
-The current broad soil category and undated user-entered groundwater depth are preserved as user observations but cannot by themselves establish recharge feasibility.
+Regional soil and nearby groundwater provider records preserve their resolution and
+cannot by themselves establish property-level recharge feasibility.
 
 ## Structure selection and sizing
 
-CGWB identifies urban options including recharge pits, trenches, tubewells and recharge wells, but listing a structure is not a universal selection rule. Selection must evaluate the complete inputs and applicability conditions of the source-specific methodology. Until that evidence is available, the engine returns no recommended structure and explains the missing inputs.
+The implemented selector applies only an intersecting reviewed Hauz Khas Delhi or
+Jayanagar Bengaluru methodology record. Delhi uses the applicable CGWB trench tables;
+Jayanagar uses conditional CGWB urban-core applicability plus exact KSCST table rows.
+Other locations return no recommendation.
 
-Each future structure will have an independent sizing strategy with its own required inputs, formula, valid range, construction/filter constraints and source references. No universal dimension equation is introduced.
+The two regional strategies remain separate. Delhi returns trench/chamber dimensions
+from roof-area bands and leaves final well termination unresolved without a verified
+intake zone. KSCST returns exact-row well diameter/geometric-depth options and leaves
+the final aquifer intake depth null. No universal dimension equation is used.
 
 ## Data architecture
 

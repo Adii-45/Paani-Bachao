@@ -25,13 +25,16 @@ const sourceBackedResult: AssessmentResult = {
   derived: {
     locationStatus: "RESOLVED",
     normalizedLocation: {
+      input: "Published Example",
       canonicalName: "Example District, Example State, India",
       latitude: 12.5,
       longitude: 77.5,
       district: "Example District",
       state: "Example State",
+      country: "India",
       provider: "test fixture",
       confidence: "fixture",
+      message: "Deterministic fixture",
     },
     annualRainfallMm: 1000,
     rainfallSource: "CGWB published worked example",
@@ -62,9 +65,14 @@ const sourceBackedResult: AssessmentResult = {
     demandMetPercent: 83.33,
     depletionMonths: [5, 6],
     sizingAssumptions: ["Monthly demand is constant at the user-entered value."],
+    sizingMissingInputs: [],
+    sizingSourceIds: ["IRICEN_RWH_2022"],
+    sizingRainfallReferencePeriod: "1971-2020",
+    sizingRainfallSourceUrls: [],
+    sizingRainfallSourceRecords: [],
+    storagePeriods: [],
   },
   artificialRecharge: {
-    potential: null,
     potentialRechargeLitresPerYear: null,
     recommendedStructure: null,
     dimensions: null,
@@ -80,9 +88,35 @@ const sourceBackedResult: AssessmentResult = {
         sourceIds: ["CGWB_NAQUIM"],
       },
     ],
+    reasons: ["No applicable CGWB/NAQUIM feature is available."],
     quantityStatus: "INSUFFICIENT_DATA",
+    quantityMethodId: "IRICEN_STORAGE_OVERFLOW_AVAILABLE_FOR_AR",
+    annualHarvestLitres: null,
+    annualDemandSuppliedLitres: null,
+    annualOverflowLitres: null,
+    catchmentLossesLitres: null,
+    endingStorageLitres: null,
+    quantityAssumptions: [],
+    quantityMissingInputs: ["annual tank overflow"],
+    conditionsPassed: [],
+    conditionsFailed: [],
+    conditionsRequiringVerification: [],
+    missingData: ["No applicable CGWB/NAQUIM feature is available."],
+    fieldTestsRecommended: [],
     structureSelectionStatus: "INSUFFICIENT_DATA_FOR_SELECTION",
+    alternativeStructures: [],
+    selectionReasons: [],
+    rejectedStructures: [],
+    structureMissingInputs: ["hydrogeology"],
     sizingStatus: "INSUFFICIENT_DATA_FOR_SIZING",
+    sizingMethodId: "NOT_APPLICABLE",
+    requiredFootprintM2: null,
+    filterMedia: [],
+    sizingDesignInputs: {},
+    sizingAssumptions: [],
+    fieldVerificationRequired: [],
+    sizingMissingInputs: ["selected structure"],
+    sourceIds: ["CGWB_NAQUIM"],
     environmentalProfile: {
       assembledAt: "2026-08-13T00:00:00Z",
       location: {
@@ -138,6 +172,14 @@ const sourceBackedResult: AssessmentResult = {
     estimatedLossesLitres: 5_000,
     harvestableVolumeLitres: 15_000,
     sourceIds: ["CGWB_MANUAL_AR_2007"],
+    assumptions: ["Published deterministic fixture."],
+  },
+  environmentalData: {
+    locationStatus: "RESOLVED",
+    rainfall: { status: "DATA_AVAILABLE", evidenceAvailable: true, message: "Available", sourceIds: ["CGWB_MANUAL_AR_2007"], componentStatuses: {} },
+    groundwater: { status: "DATA_STALE", evidenceAvailable: true, message: "Stale nearby observation", sourceIds: ["CGWB_NAQUIM"], componentStatuses: {} },
+    soil: { status: "FIELD_MEASUREMENT_REQUIRED", evidenceAvailable: false, message: "Field test required", sourceIds: [], componentStatuses: {} },
+    hydrogeology: { status: "DATA_UNAVAILABLE", evidenceAvailable: false, message: "Unavailable", sourceIds: [], componentStatuses: {} },
   },
   warnings: [],
   sources: [
@@ -183,6 +225,7 @@ describe("assessment results", () => {
     expect(screen.getByRole("heading", { name: "Environmental Evidence" })).toBeInTheDocument();
     expect(screen.getByText("3 m bgl at Jayanagar")).toBeInTheDocument();
     expect(screen.getByText(/field infiltration\/percolation test/)).toBeInTheDocument();
+    expect(screen.getByText("Water-quality verification")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Manual on Artificial Recharge/ })).toHaveAttribute(
       "href",
       "https://cgwb.gov.in/example.pdf",
@@ -195,6 +238,7 @@ describe("assessment results", () => {
     const unavailable: AssessmentResult = {
       ...sourceBackedResult,
       derived: {
+        ...sourceBackedResult.derived,
         annualRainfallMm: null,
         rainfallSource: null,
         runoffCoefficient: null,
@@ -244,8 +288,10 @@ describe("assessment results", () => {
         endingStorageLitres: 4_000,
         quantityMethodId: "IRICEN_STORAGE_OVERFLOW_AVAILABLE_FOR_AR",
         feasibilityStatus: "ELIGIBLE",
+        structureSelectionStatus: "RECOMMENDED",
+        sizingStatus: "INDICATIVE_DESIGN_AVAILABLE",
         recommendedStructure: { type: "RECHARGE_TRENCH", displayName: "Recharge Trench" },
-        dimensions: { lengthM: 1.2, widthM: 1.2, depthM: 1.4 },
+        dimensions: { trenchLengthM: 1.2, trenchWidthM: 1.2, trenchDepthM: 1.4 },
         selectionReasons: ["Reviewed formation is alluvial."],
         rejectedStructures: [
           { structure: "TRENCH_WITH_RECHARGE_WELL", reason: "Depth condition not met.", sourceIds: ["CGWB_DELHI_STANDARD_DESIGNS"] },
@@ -259,10 +305,40 @@ describe("assessment results", () => {
 
     expect(screen.getAllByText("1,000 L/year").length).toBeGreaterThan(0);
     expect(screen.getByText("Recharge Trench")).toBeInTheDocument();
-    expect(screen.getByText("1.2 m × 1.2 m × 1.4 m")).toBeInTheDocument();
+    expect(screen.getByText("Recommended")).toBeInTheDocument();
+    expect(screen.getByText("Indicative design available")).toBeInTheDocument();
+    expect(screen.getByText("Trench: 1.2 m × 1.2 m × 1.4 m")).toBeInTheDocument();
     expect(screen.getByText("Reviewed formation is alluvial.")).toBeInTheDocument();
     expect(screen.getByText("Field verification required")).toBeInTheDocument();
     expect(screen.getByText(/overflow is water available for routing/i)).toBeInTheDocument();
+  });
+
+  it("renders conditional recharge-well options without inventing intake depth", () => {
+    const wellResult: AssessmentResult = {
+      ...sourceBackedResult,
+      artificialRecharge: {
+        ...sourceBackedResult.artificialRecharge,
+        feasibilityStatus: "CONDITIONALLY_ELIGIBLE",
+        recommendedStructure: { type: "RECHARGE_WELL", displayName: "Recharge Well" },
+        dimensions: {
+          designStorageVolumeLitres: 2100,
+          wellOptions: [{ diameterM: 0.91, minimumDesignDepthM: 3.35 }],
+          finalAquiferIntakeDepthM: null,
+        },
+        alternativeStructures: ["RECHARGE_PIT"],
+        structureSelectionStatus: "CONDITIONAL_RECOMMENDATION",
+        sizingStatus: "PARTIAL_INDICATIVE_DESIGN",
+        fieldVerificationRequired: ["Confirm a suitable aquifer intake zone before finalizing well depth."],
+      },
+    };
+    sessionValue.mockReturnValue(JSON.stringify(wellResult));
+    render(<ResultPage />);
+
+    expect(screen.getByText("Recharge Well")).toBeInTheDocument();
+    expect(screen.getByText("0.91 m diameter × 3.35 m published minimum geometric depth")).toBeInTheDocument();
+    expect(screen.getByText("Other conditionally feasible options")).toBeInTheDocument();
+    expect(screen.getByText("Recharge pit")).toBeInTheDocument();
+    expect(screen.getByText(/Confirm a suitable aquifer intake zone/)).toBeInTheDocument();
   });
 
   it("offers the assessment route when no stored result exists", () => {
